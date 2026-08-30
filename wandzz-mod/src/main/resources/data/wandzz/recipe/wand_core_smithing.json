@@ -1,0 +1,5 @@
+{
+  "type": "wandzz:wand_core_smithing",
+  "base": "#wandzz:wands",
+  "addition": "#wandzz:cores"
+}

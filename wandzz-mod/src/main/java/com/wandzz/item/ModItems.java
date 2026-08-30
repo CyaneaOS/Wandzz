@@ -27,9 +27,15 @@ import java.util.Map;
 public final class ModItems {
 
     public static final Map<WandMaterial, WandItem> WANDS = new EnumMap<>(WandMaterial.class);
+    /** Patyk z arkannego drewna - 3 na skos = lepsza rozdzka (patrz data/wandzz/recipe). */
+    public static Item ARCANE_STICK;
     public static final Map<CoreType, WandCoreItem> CORES = new EnumMap<>(CoreType.class);
 
     public static void bootstrap() {
+        ResourceKey<Item> stickKey = itemKey("arcane_stick");
+        ARCANE_STICK = Registry.register(BuiltInRegistries.ITEM, stickKey,
+                new Item(new Item.Properties().setId(stickKey)));
+
         for (WandMaterial material : WandMaterial.values()) {
             ResourceKey<Item> key = itemKey(material.translationKey());
             WandItem wand = new WandItem(material, baseProperties(key));

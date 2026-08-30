@@ -1,6 +1,7 @@
 package com.wandzz.item;
 
 import com.wandzz.Wandzz;
+import com.wandzz.block.ModBlocks;
 import com.wandzz.core.WandCoreItem;
 import com.wandzz.wand.WandItem;
 import com.wandzz.wand.WandMaterial;
@@ -40,6 +41,10 @@ public final class ModItemGroups {
                     for (WandCoreItem core : ModItems.CORES.values()) {
                         output.accept(core);
                     }
+                    // Surowce - bez tego drewna nie da sie niczego wyubic w survivalu.
+                    output.accept(ModBlocks.ARCANE_LOG.asItem());
+                    output.accept(ModBlocks.ARCANE_PLANKS.asItem());
+                    output.accept(ModItems.ARCANE_STICK);
                 })
                 .build());
     }

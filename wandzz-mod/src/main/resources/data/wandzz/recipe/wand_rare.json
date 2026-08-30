@@ -2,14 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "pattern": [
-    "  E",
-    " #_",
-    "#  "
+    "  A",
+    " A ",
+    "A E"
   ],
   "key": {
-    "E": "minecraft:echo_shard",
-    "#": "#minecraft:logs",
-    "_": "minecraft:stick"
+    "A": "wandzz:arcane_stick",
+    "E": "minecraft:echo_shard"
   },
   "result": {
     "count": 1,

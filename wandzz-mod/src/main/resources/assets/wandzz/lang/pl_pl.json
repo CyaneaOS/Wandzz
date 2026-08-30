@@ -35,5 +35,9 @@
   "wandzz.wand.full": "Brak wolnych slotów na rdzenie w tej różdżce.",
   "wandzz.wand.no_such_core": "Tego rdzenia nie ma w tej różdżce.",
   "wandzz.wand.core_inserted": "Rdzeń włożony.",
-  "wandzz.wand.core_removed": "Rdzeń wyjęty."
+  "wandzz.wand.core_removed": "Rdzeń wyjęty.",
+  "block.wandzz.arcane_log": "Arkanny pień",
+  "block.wandzz.arcane_planks": "Deski arkannego drewna",
+  "item.wandzz.arcane_stick": "Arkanny patyk",
+  "wandzz.wand.no_free_slot": "Brak wolnego slotu na kolejny rdzeń."
 }

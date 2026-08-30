@@ -97,34 +97,76 @@ plików Javy jest dodatkowo sprawdzana parserem, a wszystkie JSONy są parsowane
 Dodatkowo w `lang/en_us.json` i `lang/pl_pl.json` dopisano nazwy wszystkich
 15 core'ów oraz klucz `wandzz.core.level` (używany przez tooltip rdzeni).
 
-## Jak to działa w grze (crafting + rdzenie)
+## Jak to działa w grze
 
-**Przepisy** (`data/wandzz/recipe/`, 21 plików, czysty JSON, bez generatora dat):
+### Drewno „arkany" (bez generowania drzew)
 
-| wynik | przepis |
-|---|---|
-| `wand_normal` | 2× `#minecraft:planks` + `stick` (po przekątnej) |
-| `wand_custom` | j.w. z `#minecraft:logs` + `amethyst_shard` |
-| `wand_rare` | `#minecraft:logs` + `echo_shard` + `stick` |
-| `wand_*_magic` | shapeless: bazowa różdżka + 2× `glowstone_dust` (upgrade, **rdzenie nie przenoszą się**) |
-| `core_<żywioł>` | shapeless: `amethyst_shard` + surowiec żywiołu (np. `feather`, `clay_ball`, `snowball`, `gunpowder`, `slime_ball`, `iron_ingot`, `ender_eye`, `clock`, `blaze_rod`, `glow_ink_sac`, `glowstone_dust`, `prismarine_shard`, `echo_shard`, `dragon_breath`) |
+| id | co to | jak zdobyć |
+|---|---|---|
+| `wandzz:arcane_log` | blok kłody (`RotatedPillarBlock`, oś X/Y/Z) | tylko crafting / kreatywa — **brak saplingu i `worldgen`**, świadomie |
+| `wandzz:arcane_planks` | blok desek | 1× `arcane_log` → 4 deski (shape' `["#"]`, jak w vanilla) |
+| `wandzz:arcane_stick` | przedmiot (patyk z tego drewna) | 2× `arcane_planks` w słupku → 4 patyki |
 
-Składnik surowca jest tym samym przedmiotem, którego tekstury używa ikona rdzenia,
-więc przepis poznaje się po samej ikonie.
+Deski i kłoda są dopisane do vanilla tagów `#minecraft:planks`, `#minecraft:logs`
+i `#minecraft:mineable/axe` (przez `data/minecraft/tags/item/...`, bez `replace`),
+więc siekiera je kopie, a vanilla przepisy je akceptują.
 
-**Wkładanie rdzeni – bez GUI** (`WandInteractions`, wspólne wejście `UseItemCallback`):
-rdzeń w **ręce głównej**, różdżka w **drugiej** → PPM wkłada rdzeń (shift+PPM wyjmuje).
-Klik PPM różdżką w ręce głównej jest już zajęty przez ekran rysowania, dlatego
-właścicielem interakcji musi być rdzeń. W twórczym trybie rdzeń się nie zużywa.
+### Rozdżki — im lepsze drewno, tym więcej rdzeni
 
-**Rzucanie**: PPM z różdżką → rysujesz gest → PPM puszczony = wysyłka na serwer.
-Od teraz każde odrzucone rzucenie pokazuje powód nad hotbarem (brak różdżki, pusta
-różdżka bez rdzenia, za niski poziom rdzenia, za mało many, gest nierozpoznany).
+| wynik | slots | przepis |
+|---|---|---|
+| `wand_normal` | 1 | 2× `#minecraft:planks` + `minecraft:stick` po przekątnej |
+| `wand_custom` | 2 | **3× `wandzz:arcane_stick` na skos** — `["  A", " A ", "A  "]` |
+| `wand_rare` | 4 | 3× `arcane_stick` na skos + `minecraft:echo_shard` w rogu |
+| `wand_*_magic` | 1 / 3 / 6 | shapeless: różdżka bazowa + 2× `glowstone_dust` |
+
+Uwaga: magiczny upgrade tworzy nową różdżkę, więc **rdzeni się nie przenoszą**
+(wynik przepisu data-driven nie widzi komponentów bazy — tylko własny przepis
+w kodzie może je skopiować, patrz niżej).
+
+### Rdzenie: wkładanie w stole kowalskim
+
+`data/wandzz/recipe/wand_core_smithing.json` + `WandCoreSmithingRecipe`
+(własny `RecipeSerializer` `wandzz:wand_core_smithing`):
+
+```
+slot szablonu : pusty
+slot base     : dowolna różdżka   (#wandzz:wands)
+slot addition : dowolny rdzeń     (#wandzz:cores)
+wynik         : ta sama różdżka + jeden rdzeń w wolnym slocie
+```
+
+Dlaczego własna klasa przepisu, a nie `minecraft:smithing_transform`:
+
+- wynik zależy od tego, co **już jest** w różdżce — data-driven `result` jest
+  statyczne i przy każdej rozbudowie skasowałoby wcześniejsze rdzenie;
+- `SmithingRecipe#templateIngredient()` zwraca `Optional`, więc pusty szablon
+  jest w pełni legalny (match idzie przez `Ingredient#testOptionalIngredient`) —
+  nie trzeba wymyślać przedmiotu-szablonu na siłę;
+- `RecipeType` bierze się z `default RecipeType getType()` w `SmithingRecipe`,
+  więc menu smithingu znajduje ten przepis mimo obcego `type` w JSON.
+
+Wolny slot jest warunkiem `matches`, więc przy pełnej różdżce okno wyniku po
+prostu zostaje puste (bez „cichego" braku efektu).
+
+**Wyjmowanie**: PPM rdzeniem, gdy różdżka jest w którejś ręce (`WandInteractions`) —
+rdzeń wraca do ekwipunku, a w kreatywie nic się nie zużywa.
+
+### Rzucanie
+
+PPM z różdżką → rysujesz gest → puszczenie PPM = wysyłka na serwer. Każde
+odrzucone rzucenie mówi dlaczego (brak różdżki / różdżka bez rdzenia / rdzeń za
+niskiego poziomu / za mało many / gest nierozpoznany).
 
 ## Czego brakuje / co warto dopracować dalej
 
 - Pozostałe 13 core'ów ma tylko nazwę i poziom – potrzebują własnych zaklęć
   i efektów (analogicznie do Feather/Dragon Breath).
+- Drzewo „arkany" nie generuje się w świecie: brak `arcane_sapling`, brak
+  `worldgen_configured_feature` / `placed_feature` / `biome_modifier` i brak
+  logów w liściach. Drewno jest na razie tylko z craftingu (patrz wyżej).
+- Modele `arcane_log` / `arcane_planks` dziedziczą tekstury dębu
+  (`minecraft:block/oak_*`) — własne PNG w `assets/wandzz/textures/block/`.
 - Modele itemów są już na miejscu (`assets/wandzz/items/*.json` jako definicje
   klienta 1.21.4+ plus `assets/wandzz/models/item/*.json`), ale to **placeholdery**
   na teksturach vanilla: różdżki renderują się jako patyk / `warped_fungus_on_a_stick`

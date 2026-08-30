@@ -35,5 +35,9 @@
   "wandzz.wand.full": "No free core slots in this wand.",
   "wandzz.wand.no_such_core": "That core is not installed in this wand.",
   "wandzz.wand.core_inserted": "Core installed.",
-  "wandzz.wand.core_removed": "Core removed."
+  "wandzz.wand.core_removed": "Core removed.",
+  "block.wandzz.arcane_log": "Arcane Log",
+  "block.wandzz.arcane_planks": "Arcane Planks",
+  "item.wandzz.arcane_stick": "Arcane Stick",
+  "wandzz.wand.no_free_slot": "No free slot for another core."
 }

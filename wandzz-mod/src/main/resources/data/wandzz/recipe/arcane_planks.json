@@ -2,15 +2,13 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "pattern": [
-    "  A",
-    " A ",
-    "A  "
+    "#"
   ],
   "key": {
-    "A": "wandzz:arcane_stick"
+    "#": "wandzz:arcane_log"
   },
   "result": {
-    "count": 1,
-    "id": "wandzz:wand_custom"
+    "count": 4,
+    "id": "wandzz:arcane_planks"
   }
 }
