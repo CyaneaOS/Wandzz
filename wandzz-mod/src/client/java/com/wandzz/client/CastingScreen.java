@@ -1,5 +1,6 @@
 package com.wandzz.client;
 
+import com.wandzz.Wandzz;
 import com.wandzz.gesture.CastingData;
 import com.wandzz.gesture.Point;
 import com.wandzz.network.CastPayload;
@@ -75,11 +76,30 @@ public class CastingScreen extends Screen {
 
     private void finishCasting() {
         List<Point> points = castingData.stopCasting();
-        Optional<Spell> recognized = SpellRegistry.recognize(points);
-        recognized.ifPresent(spell ->
-                ClientPlayNetworking.send(new CastPayload(spell.id())));
         Minecraft client = Minecraft.getInstance();
+
+        if (points.size() < 2) {
+            // Puste przesuniecie kursora - nie wysylamy nic, ale mowimy dlaczego,
+            // inaczej wyglada to jak "czar nie dziala".
+            tell(client, "wandzz.gesture.too_short");
+        } else {
+            Optional<Spell> recognized = SpellRegistry.recognize(points);
+            if (recognized.isPresent()) {
+                ClientPlayNetworking.send(new CastPayload(recognized.get().id()));
+            } else {
+                tell(client, "wandzz.gesture.unknown");
+                SpellRegistry.recognizer().bestMatch(points).ifPresent(best ->
+                        Wandzz.LOGGER.info("Wandzz: gest nierozpoznany, najblizej: {} ({})",
+                                best.templateId(), String.format("%.0f%%", best.score() * 100)));
+            }
+        }
         client.setScreen(null);
+    }
+
+    private static void tell(Minecraft client, String key) {
+        if (client.player != null) {
+            client.player.displayClientMessage(Component.translatable(key), true);
+        }
     }
 
     @Override

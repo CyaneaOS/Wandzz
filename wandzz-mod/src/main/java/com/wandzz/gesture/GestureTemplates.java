@@ -64,11 +64,16 @@ public final class GestureTemplates {
         );
     }
 
-    /** Pojedyncza krotka kreska pozioma - "uderzenie". */
+    /**
+     * Czkawka / "uderzenie w dol". Wczesniej byla tu pojedyncza kreska pozioma,
+     * ale $1 jest odporny na OBROT, a kreska i "kreska z hakiem" (torch) to po
+     * znormalizowaniu ten sam ksztalt - uderzenie i pochodnia myly sie nawzajem.
+     */
     public static List<Point> strikeStroke() {
         return List.of(
-                new Point(-100, 0),
-                new Point(100, 0)
+                new Point(-100, -80),
+                new Point(0, 80),
+                new Point(100, -80)
         );
     }
 

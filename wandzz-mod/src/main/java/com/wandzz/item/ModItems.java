@@ -58,7 +58,7 @@ public final class ModItems {
      * NullPointerException "Item id not set" w Item.Properties#effectiveDescriptionId,
      * bo konstruktor Item czyta id, zeby zbudowac klanges opisu i nazwe modelu.
      * Dlatego wlasciwosc ustawiamy ZANIM powstanie obiekt przedmiotu - tak jak
-     * w vanilla, gdzie Items#registerItem woła {@code factory.apply(properties.setId(key))}.
+     * w vanilla, gdzie Items#registerItem wola {@code factory.apply(properties.setId(key))}.
      */
     private static Item.Properties baseProperties(ResourceKey<Item> key) {
         return new Item.Properties().stacksTo(1).setId(key);

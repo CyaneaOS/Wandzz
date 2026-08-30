@@ -23,5 +23,17 @@
   "wandzz.core.level": "Poziom rdzenia: %s",
   "key.wandzz.cast": "Rysuj zaklęcie",
   "key.categories.wandzz": "Wandzz",
-  "itemGroup.wandzz.wandzz": "Wandzz"
+  "itemGroup.wandzz.wandzz": "Wandzz",
+  "wandzz.gesture.too_short": "Narysuj dłuższy gest — przytrzymaj PPM z różdżką w ręce.",
+  "wandzz.gesture.unknown": "Gest nierozpoznany.",
+  "wandzz.spell.unknown": "Nieznane zaklęcie.",
+  "wandzz.wand.required": "Rzucać możesz tylko trzymając różdżkę.",
+  "wandzz.wand.needed": "Rdzeń trzymaj w ręce głównej, a różdżkę w drugiej.",
+  "wandzz.wand.empty": "Ta różdżka nie ma żadnego rdzenia — PPM z rdzeniem w ręce głównej (różdżka w drugiej).",
+  "wandzz.spell.no_core": "Wymaga rdzenia poziomu %s lub wyższego.",
+  "wandzz.spell.not_enough_mana": "Za mało many: potrzeba %s, masz %s.",
+  "wandzz.wand.full": "Brak wolnych slotów na rdzenie w tej różdżce.",
+  "wandzz.wand.no_such_core": "Tego rdzenia nie ma w tej różdżce.",
+  "wandzz.wand.core_inserted": "Rdzeń włożony.",
+  "wandzz.wand.core_removed": "Rdzeń wyjęty."
 }

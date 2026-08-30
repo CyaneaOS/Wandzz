@@ -36,6 +36,21 @@ public record WandData(WandMaterial material, List<CoreType> cores) {
         return new WandData(material, List.copyOf(updated));
     }
 
+    /**
+     * Usuniecie PIERWSZEGO wystapienia core'a. Zwraca `this`, jesli takiego nie ma,
+     * dzieki temu wywolujacy rozroznia "nic do usuniecia" po tozsamosci obiektu.
+     */
+    public WandData withCoreRemoved(CoreType core) {
+        if (!cores.contains(core)) return this;
+        List<CoreType> updated = new ArrayList<>(cores);
+        updated.remove(core);
+        return new WandData(material, List.copyOf(updated));
+    }
+
+    public boolean hasCore(CoreType core) {
+        return cores.contains(core);
+    }
+
     /** Najwyzszy poziom sposrod zainstalowanych core'ow (0 jesli brak core'ow). */
     public int highestLevel() {
         return cores.stream().mapToInt(CoreType::level).max().orElse(0);

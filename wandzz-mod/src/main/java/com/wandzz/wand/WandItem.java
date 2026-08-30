@@ -1,6 +1,8 @@
 package com.wandzz.wand;
 
+import com.wandzz.core.CoreType;
 import com.wandzz.item.ModComponents;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 
@@ -28,11 +30,28 @@ public class WandItem extends Item {
         return data != null ? data : WandData.empty(WandMaterial.NORMAL);
     }
 
+    /** Rozdzka trzymana przez gracza: najpierw reka glowna, potem druga; null jesli brak. */
+    public static ItemStack findWand(Player player) {
+        ItemStack main = player.getMainHandItem();
+        if (main.getItem() instanceof WandItem) return main;
+        ItemStack off = player.getOffhandItem();
+        return off.getItem() instanceof WandItem ? off : null;
+    }
+
     /** Proba wlozenia core'a do rozdzki - zwraca true jesli sie udalo (byl wolny slot). */
-    public static boolean insertCore(ItemStack wandStack, com.wandzz.core.CoreType core) {
+    public static boolean insertCore(ItemStack wandStack, CoreType core) {
         WandData current = getData(wandStack);
         if (current.freeSlots() <= 0) return false;
         wandStack.set(ModComponents.WAND_DATA, current.withCoreAdded(core));
+        return true;
+    }
+
+    /** Wyciagniecie core'a (tylko jesli faktycznie go ma) - do sneak+PPM. */
+    public static boolean removeCore(ItemStack wandStack, CoreType core) {
+        WandData current = getData(wandStack);
+        WandData updated = current.withCoreRemoved(core);
+        if (updated == current) return false;
+        wandStack.set(ModComponents.WAND_DATA, updated);
         return true;
     }
 }

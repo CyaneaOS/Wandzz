@@ -79,6 +79,10 @@ dopasowane:
 | brak wrappera w repo | dodane `gradlew`, `gradlew.bat`, `gradle/wrapper/*` (Gradle 9.5.1), `.gitattributes`, `.gitignore`, `LICENSE` |
 | `loom_version=1.17-SNAPSHOT` | przypięte do `1.17.20` (ten sam plugin, konkretny build zamiast ruchomego snapshotu) |
 | `id 'fabric-loom' version "${project.loom_version}"` | **Gradle 9** (wrapper 9.5.1) odrzuca `project.` w bloku `plugins {}` → `version "${loom_version}"`, inaczej startup fail: „argument list must be exactly 1 literal String or String with property replacement" |
+| $1 `scaleToSquare` skalował X i Y **osobno** | niejednorodne skalowanie rozciągało drżenie myszy (np. 3 px w Y) do pełnego kwadratu 250 – szum był większy niż kształt, więc gesty nie przechodziły progu. Teraz unitarne skalowanie przez dłuższy bbox, jak w oryginalnym $1 |
+| Golden Section Search w rozpoznawaniu | GSS zakłada unimodalność kosztu; trójkąt i inne figury symetryczne mają po 3 minima i wyszukiwanie grzęzło (trójkąt: 0.56 własnego vs 0.61 obcego → odrzucony). Zamienione na przeszukiwanie siatkowe (±45° co 6° dla kresek, ±180° co 15° dla figur zamkniętych) + doszlifowanie co 1° |
+| gest `strike` = pozioma kreska | $1 jest odporny na obrót, więc „kreska" i „kreska z hakiem" (torch) to po normalizacji ten sam kształt – czary myliły się między sobą. `strike` to teraz czkawka (V) |
+| cast odrzucany po cichu (`return` bez komunikatu) | każdy przypadek odmowy (brak różdżki / brak rdzenia / za mało many / nierozpoznany gest) dostaje teraz action bar; poza tym testowany zbiór wzorców daje 100% trafień przy szumie 6 px i obrocie ±63° |
 | `build.gradle` bez `publishing`/`jar`/`encoding` | uzupełnione wg oficjalnego template'u + `options.encoding = "UTF-8"` |
 
 Wszystkie użyte nazwy klas i metod zostały sprawdzone bezpośrednio na źródłach
@@ -93,6 +97,30 @@ plików Javy jest dodatkowo sprawdzana parserem, a wszystkie JSONy są parsowane
 Dodatkowo w `lang/en_us.json` i `lang/pl_pl.json` dopisano nazwy wszystkich
 15 core'ów oraz klucz `wandzz.core.level` (używany przez tooltip rdzeni).
 
+## Jak to działa w grze (crafting + rdzenie)
+
+**Przepisy** (`data/wandzz/recipe/`, 21 plików, czysty JSON, bez generatora dat):
+
+| wynik | przepis |
+|---|---|
+| `wand_normal` | 2× `#minecraft:planks` + `stick` (po przekątnej) |
+| `wand_custom` | j.w. z `#minecraft:logs` + `amethyst_shard` |
+| `wand_rare` | `#minecraft:logs` + `echo_shard` + `stick` |
+| `wand_*_magic` | shapeless: bazowa różdżka + 2× `glowstone_dust` (upgrade, **rdzenie nie przenoszą się**) |
+| `core_<żywioł>` | shapeless: `amethyst_shard` + surowiec żywiołu (np. `feather`, `clay_ball`, `snowball`, `gunpowder`, `slime_ball`, `iron_ingot`, `ender_eye`, `clock`, `blaze_rod`, `glow_ink_sac`, `glowstone_dust`, `prismarine_shard`, `echo_shard`, `dragon_breath`) |
+
+Składnik surowca jest tym samym przedmiotem, którego tekstury używa ikona rdzenia,
+więc przepis poznaje się po samej ikonie.
+
+**Wkładanie rdzeni – bez GUI** (`WandInteractions`, wspólne wejście `UseItemCallback`):
+rdzeń w **ręce głównej**, różdżka w **drugiej** → PPM wkłada rdzeń (shift+PPM wyjmuje).
+Klik PPM różdżką w ręce głównej jest już zajęty przez ekran rysowania, dlatego
+właścicielem interakcji musi być rdzeń. W twórczym trybie rdzeń się nie zużywa.
+
+**Rzucanie**: PPM z różdżką → rysujesz gest → PPM puszczony = wysyłka na serwer.
+Od teraz każde odrzucone rzucenie pokazuje powód nad hotbarem (brak różdżki, pusta
+różdżka bez rdzenia, za niski poziom rdzenia, za mało many, gest nierozpoznany).
+
 ## Czego brakuje / co warto dopracować dalej
 
 - Pozostałe 13 core'ów ma tylko nazwę i poziom – potrzebują własnych zaklęć
@@ -103,10 +131,7 @@ Dodatkowo w `lang/en_us.json` i `lang/pl_pl.json` dopisano nazwy wszystkich
   / `blaze_rod`, a core'y jako pasujące vanillowe przedmioty (feather, dragon_breath,
   echo_shard itd.). Własne tekstury: `assets/wandzz/textures/item/*` i podmiana
   `layer0` w modelach.
-- GUI do wkładania core'ów w sloty różdżki (obecnie `WandItem.insertCore` to
-  gotowa metoda, ale brak ekranu/przepisu craftingowego, który by z niej korzystał).
-- HUD z paskiem many.
-- Recipe (crafting) dla różdżek i core'ów – brak plików `data/wandzz/recipe`.
+- HUD z paskiem many (sama mana jest, ale w action barze widać tylko jej brak).
 - Skrót klawiszowy `key.wandzz.cast` ma już wpisy w `lang`, ale sam keybind
   nie jest zarejestrowany (gest uruchamiany jest PPM z różdżką w ręce).
 

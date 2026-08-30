@@ -3,6 +3,7 @@ package com.wandzz;
 import com.wandzz.item.ModComponents;
 import com.wandzz.item.ModItemGroups;
 import com.wandzz.item.ModItems;
+import com.wandzz.item.WandInteractions;
 import com.wandzz.mana.ManaAttachments;
 import com.wandzz.network.CastingHandler;
 import com.wandzz.spell.Spells;
@@ -33,6 +34,8 @@ public class Wandzz implements ModInitializer {
         Spells.bootstrap();
         ManaAttachments.bootstrap();
         CastingHandler.register();
+        // Core'y wklada sie PPM: core w rece glownej, rozdzka w drugiej rece.
+        WandInteractions.register();
 
         // Regeneracja many wszystkich graczy co tick serwera.
         ServerTickEvents.END_SERVER_TICK.register(server ->

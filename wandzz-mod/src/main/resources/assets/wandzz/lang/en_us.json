@@ -23,5 +23,17 @@
   "wandzz.core.level": "Core Level %s",
   "key.wandzz.cast": "Draw Spell",
   "key.categories.wandzz": "Wandzz",
-  "itemGroup.wandzz.wandzz": "Wandzz"
+  "itemGroup.wandzz.wandzz": "Wandzz",
+  "wandzz.gesture.too_short": "Draw a longer stroke with the right mouse button.",
+  "wandzz.gesture.unknown": "Gesture not recognized.",
+  "wandzz.spell.unknown": "Unknown spell.",
+  "wandzz.wand.required": "Hold a wand to cast.",
+  "wandzz.wand.needed": "Hold the core in your main hand and a wand in your off hand.",
+  "wandzz.wand.empty": "This wand has no cores - right-click with a core in your main hand.",
+  "wandzz.spell.no_core": "Needs a core of level %s or higher.",
+  "wandzz.spell.not_enough_mana": "Not enough mana: %s needed, %s available.",
+  "wandzz.wand.full": "No free core slots in this wand.",
+  "wandzz.wand.no_such_core": "That core is not installed in this wand.",
+  "wandzz.wand.core_inserted": "Core installed.",
+  "wandzz.wand.core_removed": "Core removed."
 }

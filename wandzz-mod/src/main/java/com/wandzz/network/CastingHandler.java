@@ -9,6 +9,7 @@ import com.wandzz.wand.WandData;
 import com.wandzz.wand.WandItem;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -21,6 +22,10 @@ import net.minecraft.world.item.ItemStack;
  * Klient jedynie ROZPOZNAJE gest (dla plynnosci/od razu widocznego feedbacku),
  * ale to serwer ostatecznie sprawdza, czy rozdzka gracza ma odpowiedni core
  * i czy starcza many, zanim faktycznie zastosuje efekt.
+ *
+ * Kazde odrzucenie zgloszenia jest sygnalizowane w action barze: wczesniej
+ * wszystkie sciezki bledu konczyly sie cichym {@code return}, wiec "czary nie
+ * dzialaly" bez zadnej wskazowki, na ktorym etapie sie wysypalo.
  */
 public final class CastingHandler {
 
@@ -44,26 +49,36 @@ public final class CastingHandler {
 
     private static void handleCast(ServerPlayer player, String spellId) {
         Spell spell = SpellRegistry.get(spellId).orElse(null);
-        if (spell == null) return;
-
-        if (!(player.level() instanceof ServerLevel level)) return;
-
-        ItemStack wandStack = player.getMainHandItem();
-        if (!(wandStack.getItem() instanceof WandItem)) {
-            wandStack = player.getOffhandItem();
+        if (spell == null) {
+            tell(player, "wandzz.spell.unknown");
+            return;
         }
-        if (!(wandStack.getItem() instanceof WandItem)) return;
+
+        if (!(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+
+        ItemStack wandStack = WandItem.findWand(player);
+        if (wandStack == null) {
+            tell(player, "wandzz.wand.required");
+            return;
+        }
 
         WandData wandData = WandItem.getData(wandStack);
-        boolean hasRequiredCore = wandData.cores().stream()
-                .anyMatch(spell::isProvidedBy);
-        if (!hasRequiredCore) {
-            return; // rozdzka nie ma odpowiedniego core'a - brak efektu
+        if (wandData.cores().isEmpty()) {
+            tell(player, "wandzz.wand.empty");
+            return;
+        }
+        if (wandData.cores().stream().noneMatch(spell::isProvidedBy)) {
+            tell(player, "wandzz.spell.no_core", spell.requiredLevel());
+            return;
         }
 
         ManaComponent mana = player.getAttachedOrCreate(ManaAttachments.MANA);
         if (!mana.has(spell.manaCost())) {
-            return; // za malo many
+            tell(player, "wandzz.spell.not_enough_mana",
+                    (int) Math.ceil(spell.manaCost()), (int) Math.floor(mana.current()));
+            return;
         }
 
         player.setAttached(ManaAttachments.MANA, mana.spend(spell.manaCost()));
@@ -86,5 +101,10 @@ public final class CastingHandler {
 
         double perTick = (ManaComponent.DEFAULT_REGEN_PER_SECOND * multiplier) / 20.0;
         player.setAttached(ManaAttachments.MANA, mana.regen(perTick));
+    }
+
+    /** Krotki komunikat nad hotbarem (action bar) - bez zasmiecania czatu. */
+    private static void tell(ServerPlayer player, String key, Object... args) {
+        player.displayClientMessage(Component.translatable(key, args), true);
     }
 }

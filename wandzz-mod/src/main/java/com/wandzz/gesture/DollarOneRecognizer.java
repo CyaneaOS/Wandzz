@@ -24,11 +24,10 @@ public final class DollarOneRecognizer {
 
     private static final int RESAMPLE_POINTS = 64;
     private static final double SQUARE_SIZE = 250.0;
-    private static final double GOLDEN_RATIO = 0.5 * (-1.0 + Math.sqrt(5.0));
     private static final double ANGLE_RANGE_DEG = 45.0;
     private static final double ANGLE_PRECISION_DEG = 2.0;
     /** Minimalny wynik (0..1) ponizej ktorego gest jest odrzucany jako nierozpoznany. */
-    public static final double MIN_SCORE = 0.75;
+    public static final double MIN_SCORE = 0.72;
 
     private final List<GestureTemplate> templates = new ArrayList<>();
 
@@ -41,6 +40,18 @@ public final class DollarOneRecognizer {
 
     /** Zwraca najlepiej dopasowany wzorzec, jesli wynik przekracza MIN_SCORE. */
     public Optional<Result> recognize(List<Point> rawPoints) {
+        return bestResult(rawPoints).filter(r -> r.score() >= MIN_SCORE);
+    }
+
+    /**
+     * Najlepsze dopasowanie BEZ progu. Sluzy tylko do komunikatu zwrotnego
+     * ("co moj gest przypominalo najbardziej"), zeby latwo strojic MIN_SCORE.
+     */
+    public Optional<Result> bestMatch(List<Point> rawPoints) {
+        return bestResult(rawPoints);
+    }
+
+    private Optional<Result> bestResult(List<Point> rawPoints) {
         if (rawPoints.size() < 2 || templates.isEmpty()) {
             return Optional.empty();
         }
@@ -50,7 +61,12 @@ public final class DollarOneRecognizer {
         double bestDistance = Double.MAX_VALUE;
 
         for (GestureTemplate template : templates) {
-            double distance = distanceAtBestAngle(candidate, template.points());
+            // Ksztalty zamkniete (kolo, trojkat, spirala) mozna zaczac w kazdym
+            // wierzcholku -> wskazujacy kat niczego nie normalizuje, wiec
+            // przeszukujemy pelne +-180 stopni. Dla otwartych kreskow wystarcza
+            // klasyczne +-45 (tansze i mniej podatne na pomyly).
+            boolean open = isOpen(candidate);
+            double distance = distanceAtBestAngle(candidate, template.points(), open);
             if (distance < bestDistance) {
                 bestDistance = distance;
                 bestId = template.id();
@@ -59,11 +75,24 @@ public final class DollarOneRecognizer {
 
         double halfDiagonal = 0.5 * Math.sqrt(SQUARE_SIZE * SQUARE_SIZE + SQUARE_SIZE * SQUARE_SIZE);
         double score = 1.0 - (bestDistance / halfDiagonal);
-
-        if (bestId == null || score < MIN_SCORE) {
+        if (bestId == null) {
             return Optional.empty();
         }
         return Optional.of(new Result(bestId, score));
+    }
+
+    /** Czy sciezka jest "otwarta" (koniec daleko od poczatku) - kryterium z $1+. */
+    private static boolean isOpen(List<Point> pts) {
+        Point first = pts.get(0);
+        Point last = pts.get(pts.size() - 1);
+        double dx = first.x() - last.x();
+        double dy = first.y() - last.y();
+        double mean = 0.0;
+        for (int i = 1; i < pts.size(); i++) {
+            mean += pts.get(i - 1).distanceTo(pts.get(i));
+        }
+        mean /= (pts.size() - 1);
+        return Math.sqrt(dx * dx + dy * dy) > 2.0 * mean;
     }
 
     // ---- Pipeline normalizacji ----
@@ -166,12 +195,18 @@ public final class DollarOneRecognizer {
             maxX = Math.max(maxX, p.x());
             maxY = Math.max(maxY, p.y());
         }
-        double width = Math.max(maxX - minX, 1e-9);
-        double height = Math.max(maxY - minY, 1e-9);
+        // Skalowanie JEDNOLITE (klasyczne $1): dzielimy przez dluzszy bok bboxa.
+        // Wczesniejsze skalowanie osobno X i Y rozciagalo np. lekko krzywa
+        // kreske (3 px drygu w Y) do pelnego kwadratu 250 - szum myszy
+        // byl wtedy wiekszy niz sam ksztalt i zadny gest sie nie zgadzal.
+        double scale = Math.max(maxX - minX, maxY - minY);
+        if (scale < 1e-9) {
+            scale = 1.0;
+        }
         List<Point> out = new ArrayList<>(points.size());
         for (Point p : points) {
-            double nx = (p.x() - minX) * (size / width);
-            double ny = (p.y() - minY) * (size / height);
+            double nx = (p.x() - minX) * (size / scale);
+            double ny = (p.y() - minY) * (size / scale);
             out.add(new Point(nx, ny));
         }
         return out;
@@ -186,33 +221,37 @@ public final class DollarOneRecognizer {
         return out;
     }
 
-    /** Golden Section Search - znajduje kat obrotu minimalizujacy dystans do wzorca. */
-    private double distanceAtBestAngle(List<Point> points, List<Point> template) {
-        double thetaA = Math.toRadians(-ANGLE_RANGE_DEG);
-        double thetaB = Math.toRadians(ANGLE_RANGE_DEG);
-        double thetaDelta = Math.toRadians(ANGLE_PRECISION_DEG);
-
-        double x1 = GOLDEN_RATIO * thetaA + (1 - GOLDEN_RATIO) * thetaB;
-        double f1 = distanceAtAngle(points, template, x1);
-        double x2 = (1 - GOLDEN_RATIO) * thetaA + GOLDEN_RATIO * thetaB;
-        double f2 = distanceAtAngle(points, template, x2);
-
-        while (Math.abs(thetaB - thetaA) > thetaDelta) {
-            if (f1 < f2) {
-                thetaB = x2;
-                x2 = x1;
-                f2 = f1;
-                x1 = GOLDEN_RATIO * thetaA + (1 - GOLDEN_RATIO) * thetaB;
-                f1 = distanceAtAngle(points, template, x1);
-            } else {
-                thetaA = x1;
-                x1 = x2;
-                f1 = f2;
-                x2 = (1 - GOLDEN_RATIO) * thetaA + GOLDEN_RATIO * thetaB;
-                f2 = distanceAtAngle(points, template, x2);
+    /**
+     * Najlepszy dystans do wzorca: przeszukiwanie siatkowe po calym zakresie
+     * + lokalne doscienie.
+     *
+     * Oryginalne $1 uzywa Golden Section Search, ale GSS zaklada, ze funkcja
+     * kosztu ma JEDNO minimum. Ksztalty symetryczne (trojkat = 3 minima, kolo
+     * = praktycznie stale) lamia ten zalozenie i GSS potrafil zatrzymac sie na
+     * zlej "sztorcie" - przez to np. trojkat wypadal z wynikiem 0.56, czyli
+     * ponizej progu, mimo ze graczy narysowal poprawnie.
+     * Siatka co 15/6 stopni + krok 1 stopnia wokoly najtanszego kata jest
+     * przy 7 wzorcach zupealnie darmowa (robimy to raz, po puszczeniu PPM).
+     */
+    private double distanceAtBestAngle(List<Point> points, List<Point> template, boolean open) {
+        double range = open ? ANGLE_RANGE_DEG : 180.0;
+        double step = open ? 6.0 : 15.0;
+        double bestAngle = 0.0;
+        double bestDistance = Double.MAX_VALUE;
+        for (double deg = -range; deg <= range; deg += step) {
+            double d = distanceAtAngle(points, template, Math.toRadians(deg));
+            if (d < bestDistance) {
+                bestDistance = d;
+                bestAngle = deg;
             }
         }
-        return Math.min(f1, f2);
+        for (int i = -4; i <= 4; i++) {
+            double d = distanceAtAngle(points, template, Math.toRadians(bestAngle + i));
+            if (d < bestDistance) {
+                bestDistance = d;
+            }
+        }
+        return bestDistance;
     }
 
     private double distanceAtAngle(List<Point> points, List<Point> template, double radians) {

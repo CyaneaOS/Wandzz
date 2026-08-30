@@ -12,7 +12,7 @@ import net.minecraft.world.InteractionResult;
  *
  * Rejestracja payloadu sieciowego (CastPayload) NIE jest tu potrzebna -
  * robimy to w common entrypoincie (Wandzz -> CastingHandler#register), wiec
- * rejestruje sie zarówno po stronie klienta, jak i serwera. Wczesniejsza
+ * rejestruje sie zarowno po stronie klienta, jak i serwera. Wczesniejsza
  * proba zarejestrowania "odbiornika" CastPayload po stronie klienta byla
  * bledna: to pakiet C2S, wiec ClientPlayNetworking wymagalby rejestracji w
  * playS2C() i rzucil IllegalArgumentException przy starcie.
