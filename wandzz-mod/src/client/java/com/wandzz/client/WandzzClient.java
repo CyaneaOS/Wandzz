@@ -1,21 +1,28 @@
 package com.wandzz.client;
 
+import com.wandzz.network.ManaRequestPayload;
+import com.wandzz.network.ManaSyncPayload;
+import com.wandzz.network.OpenTablePayload;
 import com.wandzz.wand.WandItem;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.InteractionResult;
 
 /**
- * Wejscie po stronie klienta. Przechwytuje uzycie rozdzki, aby otworzyc
- * CastingScreen zamiast standardowej akcji "use item".
+ * Wejscie po stronie klienta. Dwie role:
  *
- * Rejestracja payloadu sieciowego (CastPayload) NIE jest tu potrzebna -
- * robimy to w common entrypoincie (Wandzz -> CastingHandler#register), wiec
- * rejestruje sie zarowno po stronie klienta, jak i serwera. Wczesniejsza
- * proba zarejestrowania "odbiornika" CastPayload po stronie klienta byla
- * bledna: to pakiet C2S, wiec ClientPlayNetworking wymagalby rejestracji w
- * playS2C() i rzucil IllegalArgumentException przy starcie.
+ *  1. Przechwycenie uzycia rozdzki, aby otworzyc CastingScreen (rysowanie gestu)
+ *     zamiast standardowej akcji "use item".
+ *  2. Odbiorniki S2C (mana, otwarcie stolika) + HUD many.
+ *
+ * Rejestracja TYPOW pakietow (PayloadTypeRegistry) NIE jest tu potrzebna -
+ * robimy to w common entrypoincie (Wandzz -> CastingHandler / WandzzNetwork
+ * #register), wiec znaja je obie strony. Tutaj rejestrujemy tylko ODBIORNIKI
+ * pakietow S2C, a te moga istniec wylacznie po stronie klienta (dla C2S byloby to
+ * {@code IllegalArgumentException}).
  */
 public class WandzzClient implements ClientModInitializer {
 
@@ -38,5 +45,23 @@ public class WandzzClient implements ClientModInitializer {
             }
             return InteractionResult.PASS;
         });
+
+        // Serwer powiedzial, jaka jest mana -> HUD ma co rysowac.
+        ClientPlayNetworking.registerGlobalReceiver(ManaSyncPayload.ID,
+                (payload, context) -> ManaClientState.update(payload.current(), payload.max()));
+
+        // PPM na stoliku: to serwer decyduje i wysyla pakiet S2C -> otwieramy okno.
+        ClientPlayNetworking.registerGlobalReceiver(OpenTablePayload.ID,
+                (payload, context) -> Minecraft.getInstance().setScreen(new WandCoreScreen()));
+
+        // Po wejsciu na swiat prosimy o stan many (respawn i zmiana wymiaru tez
+        // tu wpadaja) - wczesniej HUD zostawal "pusty" do pierwszego rzucenia czaru.
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            ManaClientState.reset();
+            ClientPlayNetworking.send(new ManaRequestPayload());
+        });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> ManaClientState.reset());
+
+        WandzzHud.register();
     }
 }

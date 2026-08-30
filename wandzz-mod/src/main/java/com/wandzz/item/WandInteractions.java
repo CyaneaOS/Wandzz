@@ -8,15 +8,17 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Wyjmowanie rdzeni z rozdzki. WKladanie idzie przez stol kowalski
- * (patrz {@code WandCoreSmithingRecipe}) - tutaj zostal sam zwrot, zeby
- * gracz mogl odziemic rozdzke bez GUI i bez "/give".
+ * Wyjmowanie rdzeni z rozdzki. Wkladanie idzie przez stol arcaniczny
+ * (patrz {@code ArcaneTableBlock}, {@code WandCoreScreen} i
+ * {@code WandzzNetwork#applyLoadout}) - tutaj zostal sam zwrot, zeby
+ * gracz mogl odziemic rozdzke bez otwartego okna i bez "/give".
  *
  *   PPM rdzeniem (rozdzka w ktorejkolwiek rece) = wyjmi TEN rdzen z rozdzki
  *
  * Rejestracja w common entrypoincie, nie w kliencie: sklad rozdzki to data
  * component na ItemStacku, a te istnieja w tej samej postaci tylko po stronie
- * serwera. Klient dostaje rezultat przez normalna synchronizacje ekwipunku.
+ * serwera. Klient dostaje rezultat przez normalna synchronizacje ekwipunku
+ * (komponent jest `networkSynchronized`, wiec widza go rowniez tooltipy).
  *
  * Dlaczego nie PPM trzymajac rozdzke w rece glownej? Ten klik przechwytuje
  * WandzzClient (ekran rysowania gestu), wiec wlascicielem interakcji musi byc

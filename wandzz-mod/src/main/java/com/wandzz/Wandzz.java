@@ -7,7 +7,7 @@ import com.wandzz.item.ModItems;
 import com.wandzz.item.WandInteractions;
 import com.wandzz.mana.ManaAttachments;
 import com.wandzz.network.CastingHandler;
-import com.wandzz.recipe.ModRecipes;
+import com.wandzz.network.WandzzNetwork;
 import com.wandzz.spell.Spells;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -31,13 +31,13 @@ public class Wandzz implements ModInitializer {
         LOGGER.info("Wandzz: inicjalizacja systemu magii gestowej");
 
         ModComponents.bootstrap();
-        ModRecipes.bootstrap();   // serializery przepisu musza byc w rejestrze przed data-packami
         ModBlocks.bootstrap();    // bloki przed ich BlockItemami
         ModItems.bootstrap();
         ModItemGroups.bootstrap(); // zakladka kreatywna - po rejestracji przedmiotow
         Spells.bootstrap();
         ManaAttachments.bootstrap();
         CastingHandler.register();
+        WandzzNetwork.register();  // typy pakietow many/stolika musza byc znane obu stronom
         WandInteractions.register(); // PPM rdzeniem = zwrot rdzenia z rozdzki
 
         // Regeneracja many wszystkich graczy co tick serwera.

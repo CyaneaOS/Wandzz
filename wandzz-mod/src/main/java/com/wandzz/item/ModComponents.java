@@ -11,13 +11,20 @@ import java.util.function.UnaryOperator;
 
 /**
  * Custom data component (Item Components, MC 1.20.5+) przechowujace dane
- * rozdzki: material + zainstalowane core'y.
+ * rozdzki: zainstalowane rdzenie (gatunek drewna idzie z Itemem).
  */
 public final class ModComponents {
 
+    /**
+     * {@code networkSynchronized} jest tu OBOWIAZKOWE: bez niego komponent jest
+     * serwerowy, a wiec zarowno tooltip rozdzki, jak i okno stolika widzialyby
+     * pusta liste rdzeni (client dostalby stack bez tej wartosci).
+     */
     public static final DataComponentType<WandData> WAND_DATA = register(
             "wand_data",
-            builder -> builder.persistent(WandData.CODEC)
+            builder -> builder
+                    .persistent(WandData.CODEC)
+                    .networkSynchronized(WandData.STREAM_CODEC)
     );
 
     private static <T> DataComponentType<T> register(String path,

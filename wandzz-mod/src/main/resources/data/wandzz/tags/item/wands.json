@@ -1,10 +1,30 @@
 {
   "values": [
-    "wandzz:wand_normal",
-    "wandzz:wand_normal_magic",
-    "wandzz:wand_custom",
-    "wandzz:wand_custom_magic",
-    "wandzz:wand_rare",
-    "wandzz:wand_rare_magic"
+    "wandzz:oak_wand",
+    "wandzz:oak_wand_magic",
+    "wandzz:spruce_wand",
+    "wandzz:spruce_wand_magic",
+    "wandzz:birch_wand",
+    "wandzz:birch_wand_magic",
+    "wandzz:jungle_wand",
+    "wandzz:jungle_wand_magic",
+    "wandzz:acacia_wand",
+    "wandzz:acacia_wand_magic",
+    "wandzz:bamboo_wand",
+    "wandzz:bamboo_wand_magic",
+    "wandzz:dark_oak_wand",
+    "wandzz:dark_oak_wand_magic",
+    "wandzz:mangrove_wand",
+    "wandzz:mangrove_wand_magic",
+    "wandzz:cherry_wand",
+    "wandzz:cherry_wand_magic",
+    "wandzz:pale_oak_wand",
+    "wandzz:pale_oak_wand_magic",
+    "wandzz:crimson_wand",
+    "wandzz:crimson_wand_magic",
+    "wandzz:warped_wand",
+    "wandzz:warped_wand_magic",
+    "wandzz:arcane_wand",
+    "wandzz:arcane_wand_magic"
   ]
 }

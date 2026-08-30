@@ -23,10 +23,14 @@ Mysz -> MouseInput -> CastingData (List<Point>) -> $1 Recognizer
 - **`core/CoreType`** – 15 typów core'ów z poziomami. W pełni opisane w dokumencie
   (`FEATHER` lvl 1, `DRAGON_BREATH` lvl 3) są gotowe; pozostałe 13 to sloty do
   dalszej rozbudowy (nazwy/poziomy do dopracowania razem z Tobą).
-- **`wand/WandMaterial`** – 6 rodzajów drewna z liczbą slotów na core'y dokładnie
-  wg tabeli z dokumentu (0/0/1/2/3/5 dodatkowych slotów).
-- **`wand/WandData`** – dane różdżki (materiał + zainstalowane core'y) jako
-  data component na ItemStacku.
+- **`wand/WandWood`** – 13 gatunków drewna (11 vanilla + bambus + arkany); każdy
+  daje własny patyk, własną różdżkę i własną liczbę gniazd na rdzenie (1–6).
+- **`wand/WandData`** – zainstalowane rdzenie jako data component na ItemStacku,
+  synchronizowany do klienta (dlatego tooltip i okno stolika widzą skład).
+- **`block/` + `world/`** – kłoda, deski, liście, sadzonka i **stolik arcaniczny**;
+  biom `wandzz:arcane_forest`, drzewo i wymiar `wandzz:arkanum` w 100% danymi.
+- **`client/WandzzHud`** – pionowy pasek many nad hotbarem, zasilany z
+  `ManaSyncPayload` (Data Attachment serwera nie jest synchronizowany sam z siebie).
 - **`mana/`** – mana jako Fabric Data Attachment, z regeneracją zależną od core'a.
 - **`network/`** – klient rozpoznaje gest lokalnie (płynność), ale **serwer**
   ostatecznie weryfikuje, czy różdżka ma wymagany core i czy starcza many,
@@ -68,7 +72,14 @@ dopasowane:
 | `UseItemCallback#interact` zwracał `InteractionResultHolder` | zwraca `InteractionResult` (`PASS` / `SUCCESS`) |
 | `Screen#mouseReleased(double,double,int)` | input przeszedł na obiekty zdarzeń: `mouseReleased(MouseButtonEvent)`, `mouseClicked(MouseButtonEvent, boolean)`; `mouseMoved(double,double)` jest `void` |
 | `RenderSystem.enableBlend()/disableBlend()` | usunięte przez rewrite renderowania (`RenderTypes`/`GpuDevice`) — ślad gestu rysowany jest bez blendu |
-| `Item#appendHoverText(ItemStack, TooltipContext, List, TooltipFlag)` | sygnatura to teraz 5 argumentów z `TooltipDisplay` i `Consumer`, metoda jest `@Deprecated` → zwykła linia tooltipa idzie przez komponent `DataComponents.LORE` (`ItemLore`) |
+| `Item#appendHoverText(ItemStack, TooltipContext, List, TooltipFlag)` | sygnatura to teraz 5 argumentów: `(ItemStack, Item.TooltipContext, TooltipDisplay, Consumer<Component>, TooltipFlag)`; metoda jest `@Deprecated`, ale to jedyne miejsce, gdzie linia może być liczona ze stanu przedmiotu → `WandItem` i `WandCoreItem` ją nadpisują (+ `@SuppressWarnings("deprecation")`); `TooltipDisplay` leży w `net.minecraft.world.item.component` |
+| tooltip różdżki nie pokazywał rdzeni | komponent zapisany tylko przez `persistent(codec)` **nie jest synchronizowany** do klienta → `ModComponents` dokłada `networkSynchronized(WandData.STREAM_CODEC)` |
+| `Block#use(ItemStack, Level, ...)` | zastąpione przez `useWithoutItem(BlockState, Level, BlockPos, Player, BlockHitResult)` (chronione); `InteractionResult` jest teraz `sealed interface` z `SUCCESS` / `PASS` / `FAIL` i **bez** `sidedSuccess` |
+| `MenuType` + ekran kontenera na stolik | w 1.21.11 `MenuType` ma prywatny konstruktor, a `MenuScreens#register` i `ScreenConstructor` są prywatne (brak już `IMenuTypeExtension` w Fabric) → stolik ma własny `Screen` i pakiety zamiast `AbstractContainerMenu` |
+| HUD many przez `HudLayerRegistrationCallback` | wygaszony; w 1.21.11: `HudElementRegistry.addLast(Identifier, (GuiGraphics, DeltaTracker) -> ...)` z `fabric-rendering-v1` |
+| drzewo z sadzonki wymaga `Tree` w kodzie | nie: `TreeGrower(String, Optional<ResourceKey<ConfiguredFeature>>…)` wskazuje klucz `worldgen/configured_feature`, a `SaplingBlock(TreeGrower, Properties)` jest `protected` → stąd mała klasa `ArcaneSaplingBlock` |
+| `Properties#noCollission()` | pisownia to `noCollision()` (jedno „l"); liście potrzebują jeszcze `isSuffocating/isViewBlocking/isRedstoneConductor` na `false`, a `LeavesBlock` bierze w 1.21.11 szansę cząsteczki jako 1. argument |
+| własny `Recipe` z `PlacementInfo` w konstruktorze | crash `Trying to access unbound tag 'wandzz:wands'` przy tworzeniu świata; przepis smithingu rdzeni i tak poszedł do kosza na rzecz stolika, więc temat zniknął |
 | `AttachmentRegistry.builder()` | oznaczone `@Deprecated` → `AttachmentRegistry.create(id, builder -> ...)` |
 | przedmiotów nie dało się wziąć w kreatywie | dodana zakładka `Wandzz` (`ModItemGroups`, `FabricItemGroup.builder()` + rejestracja w `BuiltInRegistries.CREATIVE_MODE_TAB`, `title` z klucza `itemGroup.wandzz.wandzz`) |
 | crash przy starcie: `NullPointerException: Item id not set` | od 1.21.2 sam `Item.Properties` musi znać swój `ResourceKey<Item>` (na jego podstawie liczone jest `descriptionId` i `ITEM_MODEL`), więc `properties.setId(key)` trzeba wywołać **przed** konstruktorem przedmiotu — teraz robi to helper w `ModItems` (dokładnie jak vanilla `Items#registerItem`) |
@@ -94,63 +105,127 @@ i `services.gradle.org`), więc weryfikacja idzie w pętli z maszyną developera
 (loader 0.19.3, fabric-api 0.141.6+1.21.11, JDK 21). Składnia wszystkich
 plików Javy jest dodatkowo sprawdzana parserem, a wszystkie JSONy są parsowane.
 
-Dodatkowo w `lang/en_us.json` i `lang/pl_pl.json` dopisano nazwy wszystkich
-15 core'ów oraz klucz `wandzz.core.level` (używany przez tooltip rdzeni).
+W `lang/en_us.json` i `lang/pl_pl.json` są nazwy wszystkich 15 core'ów, 13
+patyków, 26 różdżek i bloków oraz klucze tooltipów (`wandzz.core.tooltip.*`,
+`wandzz.tooltip.*`) i okna stolika (`wandzz.gui.table.*`) — oba pliki mają
+**identyczne zbiory kluczy**, więc nic nie zostanie „ untranslated”.
+Uwaga o formacie zapisu: `WandData` nie trzyma już materiału (idzie z przedmiotu),
+a stare `{"material": …, "cores": […]}` nadal się deserializuje, bo
+`RecordCodecBuilder` ignoruje dodatkowe klucze.
 
 ## Jak to działa w grze
 
-### Drewno „arkany" (bez generowania drzew)
+### Drewno, patyki i różdżki — 13 gatunków
+
+Każde drewno z gry daje **własny patyk i własną różdżkę** (12 gatunków z
+`#minecraft:planks`, w tym bambus, plus arkany). Gatunek, a nie „kategoria”,
+decyduje o liczbie gniazd na rdzenie:
+
+| drewno | patyk | gniazda: zwykła / magiczna |
+|---|---|---|
+| `oak`, `spruce`, `birch`, `jungle`, `acacia`, `bamboo` | `wandzz:<drewno>_stick` | 1 / 1 |
+| `dark_oak`, `mangrove`, `cherry`, `pale_oak` | `wandzz:<drewno>_stick` | 2 / 3 |
+| `crimson`, `warped` | `wandzz:<drewno>_stick` | 3 / 4 |
+| `arcane` (arkany) | `wandzz:arcane_stick` | 4 / 6 |
+
+Wzór jest jeden (`WandWood.totalSlots`): `1 + extra + (magic ? bonus : 0)`.
+Receptury (`data/wandzz/recipe/`):
+
+```
+2 deski danego gatunku w słupku             -> 4 x wandzz:<drewno>_stick
+deski + patyk tego samego gatunku (skos)    -> 1 x wandzz:<drewno>_wand
+wandzz:<drewno>_wand + 2 x glowstone_dust   -> 1 x wandzz:<drewno>_wand_magic
+```
+
+Magiczny upgrade tworzy nowy przedmiot, więc **rdzenie się nie przenoszą** (wynik
+przepisu data-driven nie widzi komponentów bazy).
+
+Tooltip każdej różdżki mówi, z jakiego jest drewna, ile ma gniazd i co w nich
+siedzi (`wandzz.tooltip.*` w `lang`); każdy rdzeń ma w tooltipie poziom, mnożnik
+regeneracji many i podpowiedź, jak go zamontować.
+
+### Arkany: drzewo, liście, sadzonka, biom i wymiar `wandzz:arkanum`
 
 | id | co to | jak zdobyć |
 |---|---|---|
-| `wandzz:arcane_log` | blok kłody (`RotatedPillarBlock`, oś X/Y/Z) | tylko crafting / kreatywa — **brak saplingu i `worldgen`**, świadomie |
-| `wandzz:arcane_planks` | blok desek | 1× `arcane_log` → 4 deski (shape' `["#"]`, jak w vanilla) |
-| `wandzz:arcane_stick` | przedmiot (patyk z tego drewna) | 2× `arcane_planks` w słupku → 4 patyki |
+| `wandzz:arcane_log` | kłoda (`RotatedPillarBlock`) | ścinka drzewa w arkanum / kreatywa |
+| `wandzz:arcane_planks` | deski | 1 kłoda → 4 deski |
+| `wandzz:arcane_leaves` | liście (`LeavesBlock`, gniją bez nożyc) | łamanie liści |
+| `wandzz:arcane_sapling` | sadzonka (`ArcaneSaplingBlock`) | 5% szansa z liści |
+| `wandzz:arcane_table` | **stolik arcaniczny** (patrz niżej) | 3 deski + 2 patyki arkańskie |
 
-Deski i kłoda są dopisane do vanilla tagów `#minecraft:planks`, `#minecraft:logs`
-i `#minecraft:mineable/axe` (przez `data/minecraft/tags/item/...`, bez `replace`),
-więc siekiera je kopie, a vanilla przepisy je akceptują.
+Świat generowany jest **w całości danymi** (żadnego mixinu ani `BiomeModifier`):
 
-### Rozdżki — im lepsze drewno, tym więcej rdzeni
+- `data/wandzz/worldgen/configured_feature/arcane_tree.json` — drzewo wzorowane
+  1:1 na vanilla `minecraft:oak`, z `trunk_provider`/`foliage_provider` na blokach
+  arkanów i pniem 6–9 (kod nie jest potrzebny, bo `TreeGrower` w 1.21.11 to tylko
+  klucz do rejestru `worldgen/configured_feature`),
+- `data/wandzz/worldgen/placed_feature/arcane_trees.json` — `count: 5`,
+  `in_square`, `surface_water_depth_filter`, `heightmap: OCEAN_FLOOR`, `biome`,
+- `data/wandzz/worldgen/biome/arcane_forest.json` — kopia vanilla `forest.json`
+  z podmienionym krokiem `vegetal_decoration` (nasze drzewa + podszycie),
+  wyczyszczonymi `monster` spawnerami i fioletowymi kolorami trawy/liści/wody,
+- `data/wandzz/dimension/arkanum.json` — `type: minecraft:overworld` (ten sam
+  `dimension_type`: dobowy cykl, wysokość 384, łóżka i respawn działają) +
+  generator `minecraft:noise` z `settings: minecraft:overworld` i
+  `biome_source: minecraft:fixed` na biomie `wandzz:arcane_forest`.
 
-| wynik | slots | przepis |
-|---|---|---|
-| `wand_normal` | 1 | 2× `#minecraft:planks` + `minecraft:stick` po przekątnej |
-| `wand_custom` | 2 | **3× `wandzz:arcane_stick` na skos** — `["  A", " A ", "A  "]` |
-| `wand_rare` | 4 | 3× `arcane_stick` na skos + `minecraft:echo_shard` w rogu |
-| `wand_*_magic` | 1 / 3 / 6 | shapeless: różdżka bazowa + 2× `glowstone_dust` |
-
-Uwaga: magiczny upgrade tworzy nową różdżkę, więc **rdzeni się nie przenoszą**
-(wynik przepisu data-driven nie widzi komponentów bazy — tylko własny przepis
-w kodzie może je skopiować, patrz niżej).
-
-### Rdzenie: wkładanie w stole kowalskim
-
-`data/wandzz/recipe/wand_core_smithing.json` + `WandCoreSmithingRecipe`
-(własny `RecipeSerializer` `wandzz:wand_core_smithing`):
+Wejście (bez budowania portalu — tego danymi się nie da):
 
 ```
-slot szablonu : pusty
-slot base     : dowolna różdżka   (#wandzz:wands)
-slot addition : dowolny rdzeń     (#wandzz:cores)
-wynik         : ta sama różdżka + jeden rdzeń w wolnym slocie
+/execute in wandzz:arkanum run tp @s 0 200 0
 ```
 
-Dlaczego własna klasa przepisu, a nie `minecraft:smithing_transform`:
+**Dlaczego osobny wymiar, a nie biom w overworldzie?** Lista biomów overworldu
+jest zamrożona w kodzie (`Registries` → `freeze()` przy bootstrapzie), więc JSON
+moda nie dołoży tam wpisu — do tego potrzebny jest TerraBlender / `BiomeModifier`.
+Rozwiązanie jest takie, że:
 
-- wynik zależy od tego, co **już jest** w różdżce — data-driven `result` jest
-  statyczne i przy każdej rozbudowie skasowałoby wcześniejsze rdzenie;
-- `SmithingRecipe#templateIngredient()` zwraca `Optional`, więc pusty szablon
-  jest w pełni legalny (match idzie przez `Ingredient#testOptionalIngredient`) —
-  nie trzeba wymyślać przedmiotu-szablonu na siłę;
-- `RecipeType` bierze się z `default RecipeType getType()` w `SmithingRecipe`,
-  więc menu smithingu znajduje ten przepis mimo obcego `type` w JSON.
+- arkanum jest osobnym, w pełni data-driven wymiarem (las arkański na całym świecie),
+- a **sadzonka rośnie wszędzie**, więc drzewa arkanów da się posadzić także w
+  zwykłym świecie (zwykły `randomTick` + bone meal, patrz `ModWorldgen`).
 
-Wolny slot jest warunkiem `matches`, więc przy pełnej różdżce okno wyniku po
-prostu zostaje puste (bez „cichego" braku efektu).
+### Stolik arcaniczny: montowanie rdzeni
 
-**Wyjmowanie**: PPM rdzeniem, gdy różdżka jest w którejś ręce (`WandInteractions`) —
-rdzeń wraca do ekwipunku, a w kreatywie nic się nie zużywa.
+PPM na `wandzz:arcane_table` otwiera okno (`client/WandCoreScreen`):
+
+```
+lewa strona  : różdżka trzymana w ręce (główna, potem druga)
+prawa strona : gniazda (tyle, ile daje drewno) — klik = wyjęcie
+dół          : 36 slotów ekwipunku — klik na rdzeniu = włożenie (PPM = zapełnij)
+przyciski    : „Zatwierdź” / „Zwolnij”
+```
+
+Zmiany nie są stosowane klik po kliku: **`Zatwierdź` wysyła cały skład**
+(`WandLoadoutPayload`), a serwer (`WandzzNetwork#applyLoadout`) robi swoje — przycina
+skład do liczby gniazd, sprawdza, czy rdzenie naprawdę są w ekwipunku (jeśli nie,
+nie zmienia nic i mówi dlaczego), zwraca wyjęte, zabiera włożone i dopiero wtedy
+zapisuje data component. W kreatywie ekwipunek jest nietknięty.
+
+Dlaczego własny `Screen` + pakiet, a nie `MenuType`/`AbstractContainerMenu`:
+w 1.21.11 `MenuType` ma prywatny konstruktor, a `MenuScreens#register` **i**
+interfejs `ScreenConstructor` też są prywatne — rejestracja ekranu kontenera
+wymaga access widenera albo własnego miksu. Wcześniejszy wariant „stół
+kowalski” (`WandCoreSmithingRecipe` + `wandzz:wand_core_smithing`) został więc
+usunięty — przy okazji był źródłem crasha `Trying to access unbound tag`, bo
+przepis liczył `PlacementInfo` w konstruktorze. Został za to skrót: PPM rdzeniem
+wyjmuje go z różdżki (`WandInteractions`).
+
+### HUD many
+
+Pionowy pasek 6 × 60 px po prawej stronie, tuż nad hotbarem (10 px na prawo od
+jego krawędzi, żeby nie nachodzić na poziom doświadczenia) — `client/WandzzHud`,
+zgłoszony przez `HudElementRegistry.addLast(wandzz:mana_bar, ...)` (Fabric
+1.21.11: dawny `HudLayerRegistrationCallback` został zastąpiony rejestrem
+elementów HUD). Kreski co 1/10 wysokości, liczba nad paskiem, biała kreska na
+górze słupka = mana właśnie wraca, kolor ciemnieje poniżej 25%.
+
+Mana żyje w Data Attachment po stronie serwera i **nie jest synchronizowana**,
+dlatego doszły dwa małe pakiety: `ManaSyncPayload` (S2C — po rzuceniu, ~2×/s
+podczas regeneracji i raz przy pełni) oraz `ManaRequestPayload` (C2S — klient
+prosi przy `ClientPlayConnectionEvents.JOIN`, więc respawn, zmiana wymiaru i
+relog też dostają aktualny stan). Klient wygładza wskaźnik lerpem, więc pasek
+płynie, choć serwer wysyła go 2 razy na sekundę.
 
 ### Wzorce gestów
 
@@ -186,20 +261,23 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 
 - Pozostałe 13 core'ów ma tylko nazwę i poziom – potrzebują własnych zaklęć
   i efektów (analogicznie do Feather/Dragon Breath).
-- Drzewo „arkany" nie generuje się w świecie: brak `arcane_sapling`, brak
-  `worldgen_configured_feature` / `placed_feature` / `biome_modifier` i brak
-  logów w liściach. Drewno jest na razie tylko z craftingu (patrz wyżej).
-- Modele `arcane_log` / `arcane_planks` dziedziczą tekstury dębu
-  (`minecraft:block/oak_*`) — własne PNG w `assets/wandzz/textures/block/`.
-- Modele itemów są już na miejscu (`assets/wandzz/items/*.json` jako definicje
-  klienta 1.21.4+ plus `assets/wandzz/models/item/*.json`), ale to **placeholdery**
-  na teksturach vanilla: różdżki renderują się jako patyk / `warped_fungus_on_a_stick`
-  / `blaze_rod`, a core'y jako pasujące vanillowe przedmioty (feather, dragon_breath,
-  echo_shard itd.). Własne tekstury: `assets/wandzz/textures/item/*` i podmiana
-  `layer0` w modelach.
-- HUD z paskiem many (sama mana jest, ale w action barze widać tylko jej brak).
-- Skrót klawiszowy `key.wandzz.cast` ma już wpisy w `lang`, ale sam keybind
-  nie jest zarejestrowany (gest uruchamiany jest PPM z różdżką w ręce).
+- **Tekstury to placeholderki z vanilla**: różdżki renderują się jako
+  `blaze_rod` (magiczne jako `breeze_rod`), patyki jako `minecraft:item/stick`
+  (bambusowy jako `bamboo`), kłoda/deski/liście/sadzonka jako `oak_*`, stolik jako
+  `crafting_table_top` + `barrel_side`. Własne PNG: `assets/wandzz/textures/*` i
+  podmiana `layer0`/`all` w modelach — plików `.png` nie trzeba tworzyć, dopóki
+  nie chcesz ich w grze.
+- Okno stolika nie ma drag & drop z ekwipunku (klik = włożenie, `Zatwierdź` =
+  zapis). Pełny kontener dalby przeciąganie, ale wymaga access widenera na
+  `MenuScreens#register` + `ScreenConstructor` (prywatne w 1.21.11) i `MenuType`
+  przez `IMenuTypeExtension`, którego w Fabric dla 1.21.11 już nie ma.
+- Portalu do arkanum nie ma (wejście to `/execute in wandzz:arkanum run tp @s 0 200 0`);
+  do wyboru: blok portalu w kodzie albo TerraBlender, jeśli las ma wejść do
+  overworldu.
+- Biom arkanum nie ma własnych struktur ani `mood_sound` — wygląda i brzmi jak
+  las, tylko z fioletową trawą i bez mobów nocą.
+- Skrót klawiszowy `key.wandzz.cast` ma wpisy w `lang`, ale sam keybind nie jest
+  zarejestrowany (gest uruchamia PPM z różdżką w ręce).
 
 ## Struktura
 
@@ -207,13 +285,32 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 src/main/java/com/wandzz/
   gesture/   – Point, CastingData, $1 Recognizer, wzorce gestów
   spell/     – Spell, SpellRegistry, implementacje zaklęć
-  core/      – CoreType (15 typów), WandCoreItem
-  wand/      – WandMaterial, WandData, WandItem
-  mana/      – ManaComponent, ManaAttachments
-  network/   – CastPayload, CastingHandler (serwerowa weryfikacja + CAST)
-  item/      – ModItems, ModComponents
-  Wandzz.java – ModInitializer
+  core/      – CoreType (15 typów), WandCoreItem (tooltip: poziom + mnożnik many)
+  wand/      – WandWood (13 gatunków), WandData (rdzenie), WandItem (gniazda + tooltip)
+  mana/      – ManaComponent, ManaAttachments (Fabric Data Attachment)
+  network/   – CastPayload + CastingHandler (rzut i regeneracja many),
+               ManaSync/ManaRequest/OpenTable/WandLoadout + WandzzNetwork
+               (serwerowy montaż rdzeni i sync HUD-a)
+  block/     – ModBlocks, ArcaneTableBlock (PPM = okno), ArcaneSaplingBlock
+  world/     – ModWorldgen (TreeGrower + klucze configured_feature / dimension)
+  item/      – ModItems, ModComponents, ModItemGroups, WandInteractions
+  Wandzz.java – ModInitializer (kolejność bootstrapu ma znaczenie)
+src/main/resources/
+  assets/wandzz/{items,models/item,models/block,blockstates,lang}/  (59 definicji itemów)
+  docs/gestures.png – arkusz wzorców gestów (1:1 z GestureTemplates)
+  data/wandzz/recipe/       – 13 × patyki, 26 × różdżki, stolik, 15 × rdzenie, deski
+  data/wandzz/loot_table/blocks/ – kłoda, deski, liście (5% sadzonka), sadzonka, stolik
+  data/wandzz/worldgen/     – biome + configured_feature + placed_feature
+  data/wandzz/dimension/    – arkanum
+  data/wandzz/tags/item/    – #wandzz:wands (26), #wandzz:cores (15)
+  data/minecraft/tags/{block,item}/ – dopisane bez `replace`
 src/client/java/com/wandzz/client/
-  CastingScreen.java – zbieranie gestu z ekranu
-  WandzzClient.java  – ClientModInitializer
+  CastingScreen.java  – zbieranie gestu z ekranu
+  WandCoreScreen.java – okno stolika (klik = włóż/wyjmij, „Zatwierdź”)
+  WandzzHud.java      – pasek many;  ManaClientState.java – clientowy stan many
+  WandzzClient.java   – ClientModInitializer (odbiorniki S2C, HUD, PPM = rzucanie)
 ```
+
+Skróty klawiszy i `key.wandzz.cast` na razie tylko istnieją w `lang` — obsługa
+gestu jest na PPM, więc nic nie trzeba ustawiać.
+

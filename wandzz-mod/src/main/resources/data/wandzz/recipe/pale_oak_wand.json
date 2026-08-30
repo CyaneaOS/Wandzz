@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  P",
+    " S ",
+    "P  "
+  ],
+  "key": {
+    "P": "minecraft:pale_oak_planks",
+    "S": "wandzz:pale_oak_stick"
+  },
+  "result": {
+    "count": 1,
+    "id": "wandzz:pale_oak_wand"
+  }
+}

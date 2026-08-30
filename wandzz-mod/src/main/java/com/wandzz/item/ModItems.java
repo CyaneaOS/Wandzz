@@ -4,7 +4,7 @@ import com.wandzz.Wandzz;
 import com.wandzz.core.CoreType;
 import com.wandzz.core.WandCoreItem;
 import com.wandzz.wand.WandItem;
-import com.wandzz.wand.WandMaterial;
+import com.wandzz.wand.WandWood;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -16,7 +16,8 @@ import java.util.EnumMap;
 import java.util.Map;
 
 /**
- * Rejestracja przedmiotow (rozdziek i core'ow).
+ * Rejestracja przedmiotow: patyki i rozdzki dla kazdego gatunku drewna
+ * (11 vanilla + arkana) oraz 15 rdzeni.
  *
  * Minecraft 1.21.11 + oficjalne mapowania Mojanga:
  *   - {@code net.minecraft.resources.Identifier} (wczesniej ResourceLocation),
@@ -26,21 +27,38 @@ import java.util.Map;
  */
 public final class ModItems {
 
-    public static final Map<WandMaterial, WandItem> WANDS = new EnumMap<>(WandMaterial.class);
-    /** Patyk z arkannego drewna - 3 na skos = lepsza rozdzka (patrz data/wandzz/recipe). */
-    public static Item ARCANE_STICK;
+    /** Patyk danego gatunku - surowiec do rozdzki (2 deski -> 4 patyki). */
+    public static final Map<WandWood, Item> STICKS = new EnumMap<>(WandWood.class);
+    /** Rozdzka danego gatunku (zwykla / magiczna). */
+    public static final Map<WandWood, WandItem> WANDS = new EnumMap<>(WandWood.class);
+    public static final Map<WandWood, WandItem> MAGIC_WANDS = new EnumMap<>(WandWood.class);
     public static final Map<CoreType, WandCoreItem> CORES = new EnumMap<>(CoreType.class);
 
-    public static void bootstrap() {
-        ResourceKey<Item> stickKey = itemKey("arcane_stick");
-        ARCANE_STICK = Registry.register(BuiltInRegistries.ITEM, stickKey,
-                new Item(new Item.Properties().setId(stickKey)));
+    public static Item stick(WandWood wood) {
+        Item stick = STICKS.get(wood);
+        if (stick == null) {
+            throw new IllegalStateException("ModItems.bootstrap() nie zostalo wywolane");
+        }
+        return stick;
+    }
 
-        for (WandMaterial material : WandMaterial.values()) {
-            ResourceKey<Item> key = itemKey(material.translationKey());
-            WandItem wand = new WandItem(material, baseProperties(key));
-            Registry.register(BuiltInRegistries.ITEM, key, wand);
-            WANDS.put(material, wand);
+    public static WandItem wand(WandWood wood, boolean magic) {
+        WandItem wand = (magic ? MAGIC_WANDS : WANDS).get(wood);
+        if (wand == null) {
+            throw new IllegalStateException("ModItems.bootstrap() nie zostalo wywolane");
+        }
+        return wand;
+    }
+
+    public static void bootstrap() {
+        for (WandWood wood : WandWood.values()) {
+            ResourceKey<Item> stickKey = itemKey(wood.stickId());
+            Item stick = new Item(new Item.Properties().stacksTo(64).setId(stickKey));
+            Registry.register(BuiltInRegistries.ITEM, stickKey, stick);
+            STICKS.put(wood, stick);
+
+            registerWand(wood, false);
+            registerWand(wood, true);
         }
 
         for (CoreType core : CoreType.values()) {
@@ -51,8 +69,15 @@ public final class ModItems {
         }
     }
 
+    private static void registerWand(WandWood wood, boolean magic) {
+        ResourceKey<Item> key = itemKey(wood.wandId(magic));
+        WandItem wand = new WandItem(wood, magic, baseProperties(key));
+        Registry.register(BuiltInRegistries.ITEM, key, wand);
+        (magic ? MAGIC_WANDS : WANDS).put(wood, wand);
+    }
+
     /**
-     * Klucz zasobu przedmiotu, np. {@code wandzz:wand_normal}. Vanilla robi
+     * Klucz zasobu przedmiotu, np. {@code wandzz:oak_wand}. Vanilla robi
      * dokladnie to samo w {@code Items#vanillaItemId} (Registries.ITEM + ResourceKey#create).
      */
     private static ResourceKey<Item> itemKey(String path) {
@@ -62,7 +87,7 @@ public final class ModItems {
     /**
      * Bez {@code setId(...)} gra crashuje przy starcie:
      * NullPointerException "Item id not set" w Item.Properties#effectiveDescriptionId,
-     * bo konstruktor Item czyta id, zeby zbudowac klanges opisu i nazwe modelu.
+     * bo konstruktor Item czyta id, zeby zbudowac nazwe opisu i nazwe modelu.
      * Dlatego wlasciwosc ustawiamy ZANIM powstanie obiekt przedmiotu - tak jak
      * w vanilla, gdzie Items#registerItem wola {@code factory.apply(properties.setId(key))}.
      */

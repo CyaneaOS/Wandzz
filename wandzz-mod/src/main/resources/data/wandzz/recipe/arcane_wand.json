@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  P",
+    " S ",
+    "P  "
+  ],
+  "key": {
+    "P": "wandzz:arcane_planks",
+    "S": "wandzz:arcane_stick"
+  },
+  "result": {
+    "count": 1,
+    "id": "wandzz:arcane_wand"
+  }
+}

@@ -3,8 +3,7 @@ package com.wandzz.item;
 import com.wandzz.Wandzz;
 import com.wandzz.block.ModBlocks;
 import com.wandzz.core.WandCoreItem;
-import com.wandzz.wand.WandItem;
-import com.wandzz.wand.WandMaterial;
+import com.wandzz.wand.WandWood;
 import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -33,18 +32,30 @@ public final class ModItemGroups {
     public static void bootstrap() {
         Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, WANDZZ, FabricItemGroup.builder()
                 .title(Component.translatable("itemGroup.wandzz.wandzz"))
-                .icon(() -> new ItemStack(ModItems.WANDS.get(WandMaterial.RARE_MAGIC)))
+                .icon(() -> new ItemStack(ModItems.wand(WandWood.ARCANE, true)))
                 .displayItems((parameters, output) -> {
-                    for (WandItem wand : ModItems.WANDS.values()) {
-                        output.accept(wand);
+                    // 1. Rozdzki: najpierw arkanska (najlepsza), potem vanilla wg
+                    //    kolejnosci enuma - dwoch tej samej rodziny obok siebie.
+                    for (WandWood wood : WandWood.values()) {
+                        output.accept(ModItems.wand(wood, false));
                     }
+                    for (WandWood wood : WandWood.values()) {
+                        output.accept(ModItems.wand(wood, true));
+                    }
+                    // 2. Rdzenie
                     for (WandCoreItem core : ModItems.CORES.values()) {
                         output.accept(core);
                     }
-                    // Surowce - bez tego drewna nie da sie niczego wyubic w survivalu.
+                    // 3. Patyki (surowiec na rozdzke) - kazde drewno ma wlasny.
+                    for (WandWood wood : WandWood.values()) {
+                        output.accept(ModItems.stick(wood));
+                    }
+                    // 4. Bloki arkanum: drewno, sadzonka, liscie i stol.
                     output.accept(ModBlocks.ARCANE_LOG.asItem());
                     output.accept(ModBlocks.ARCANE_PLANKS.asItem());
-                    output.accept(ModItems.ARCANE_STICK);
+                    output.accept(ModBlocks.ARCANE_LEAVES.asItem());
+                    output.accept(ModBlocks.ARCANE_SAPLING.asItem());
+                    output.accept(ModBlocks.ARCANE_TABLE.asItem());
                 })
                 .build());
     }

@@ -29,6 +29,9 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class CastingHandler {
 
+    /** Co tyle tickow serwera wysylamy stan many do HUD-a (10 = 2 razy na sekunde). */
+    private static final long MANA_SYNC_PERIOD = 10L;
+
     private CastingHandler() {
     }
 
@@ -82,10 +85,21 @@ public final class CastingHandler {
         }
 
         player.setAttached(ManaAttachments.MANA, mana.spend(spell.manaCost()));
+        // HUD many zyje z wlasnego pakietu S2C (attachment gracza nie jest
+        // synchronizowane przez vanilla), wiec po wydaniu many wysylamy stan.
+        WandzzNetwork.syncMana(player);
         spell.cast(level, player);
     }
 
-    /** Wywolywane co tick serwera - regeneracja many z uwzglednieniem modyfikatorow core'ow. */
+    /**
+     * Wywolywane co tick serwera - regeneracja many z uwzglednieniem modyfikatorow
+     * core'ow, plus synchronizacja wartosci do HUD-a klienta.
+     *
+     * Sync nie idzie co tick: pasek ma 60 pikseli, wiec 2 pakiety na sekunde w
+     * pelni wystarcza, a klient wygladza wskaznik wlasnym lerpem (patrz
+     * ManaClientState). Ostatni pakiet leci zawsze, gdy regen dojdzie do maksimum
+     * - inaczej klient zostalby na "99.9".
+     */
     public static void tickManaRegen(ServerPlayer player) {
         ManaComponent mana = player.getAttachedOrCreate(ManaAttachments.MANA);
         if (mana.current() >= mana.max()) return;
@@ -100,7 +114,13 @@ public final class CastingHandler {
         }
 
         double perTick = (ManaComponent.DEFAULT_REGEN_PER_SECOND * multiplier) / 20.0;
-        player.setAttached(ManaAttachments.MANA, mana.regen(perTick));
+        ManaComponent updated = mana.regen(perTick);
+        player.setAttached(ManaAttachments.MANA, updated);
+
+        boolean full = updated.current() >= updated.max();
+        if (full || player.level().getGameTime() % MANA_SYNC_PERIOD == 0L) {
+            WandzzNetwork.syncMana(player);
+        }
     }
 
     /** Krotki komunikat nad hotbarem (action bar) - bez zasmiecania czatu. */

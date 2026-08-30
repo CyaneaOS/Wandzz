@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "pattern": [
+    "  P",
+    " S ",
+    "P  "
+  ],
+  "key": {
+    "P": "minecraft:warped_planks",
+    "S": "wandzz:warped_stick"
+  },
+  "result": {
+    "count": 1,
+    "id": "wandzz:warped_wand"
+  }
+}
