@@ -22,5 +22,6 @@
   "item.wandzz.core_chronos": "Chronos Core",
   "wandzz.core.level": "Core Level %s",
   "key.wandzz.cast": "Draw Spell",
-  "key.categories.wandzz": "Wandzz"
+  "key.categories.wandzz": "Wandzz",
+  "itemGroup.wandzz.wandzz": "Wandzz"
 }

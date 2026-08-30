@@ -1,6 +1,7 @@
 package com.wandzz;
 
 import com.wandzz.item.ModComponents;
+import com.wandzz.item.ModItemGroups;
 import com.wandzz.item.ModItems;
 import com.wandzz.mana.ManaAttachments;
 import com.wandzz.network.CastingHandler;
@@ -28,6 +29,7 @@ public class Wandzz implements ModInitializer {
 
         ModComponents.bootstrap();
         ModItems.bootstrap();
+        ModItemGroups.bootstrap(); // zakladka kreatywna - po rejestracji przedmiotow
         Spells.bootstrap();
         ManaAttachments.bootstrap();
         CastingHandler.register();

@@ -22,5 +22,6 @@
   "item.wandzz.core_chronos": "Rdzeń Chronosa",
   "wandzz.core.level": "Poziom rdzenia: %s",
   "key.wandzz.cast": "Rysuj zaklęcie",
-  "key.categories.wandzz": "Wandzz"
+  "key.categories.wandzz": "Wandzz",
+  "itemGroup.wandzz.wandzz": "Wandzz"
 }
