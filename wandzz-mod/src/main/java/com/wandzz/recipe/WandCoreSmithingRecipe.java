@@ -15,6 +15,7 @@ import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.SmithingRecipe;
 import net.minecraft.world.item.crafting.SmithingRecipeInput;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -46,15 +47,25 @@ public class WandCoreSmithingRecipe implements SmithingRecipe {
 
     private final Ingredient base;
     private final Ingredient addition;
-    private final PlacementInfo placementInfo;
+
+    /**
+     * PlacementInfo liczone leniwie - dokladnie jak w vanilla SmithingTransformRecipe.
+     *
+     * Budowanie PlacementInfo w konstruktorze wywala caly load swiata:
+     *   IllegalStateException: Trying to access unbound tag 'TagKey[minecraft:item / wandzz:wands]'
+     * Bo (1) RecipeManager parseruje JSON rownolegle w watkach ForkJoin (przed
+     * `apply`), a (2) PlacementInfo wypycha skladniki (PlacementInfo#createFromOptionals
+     * -> Ingredient#values -> RegistryFixedCodec) - a tagi `data/wandzz/tags/item/*`
+     * sa powiazane z rejestrem dopiero pozniej, w fazie `apply`. Sam Ingredient z
+     * kodka trzyma HolderSet leniwie, wiec do momentu gdy ktos go nie "wypcha",
+     * nie ma problemu - stad w vanilla `if (this.placementInfo == null)`.
+     */
+    @Nullable
+    private PlacementInfo placementInfo;
 
     public WandCoreSmithingRecipe(final Ingredient base, final Ingredient addition) {
         this.base = base;
         this.addition = addition;
-        // Slot szablonu (0) jest pusty -> Optional.empty(), zeby shift-click
-        // nie probowal tam nickladzc.
-        this.placementInfo = PlacementInfo.createFromOptionals(
-                List.of(Optional.empty(), Optional.of(base), Optional.of(addition)));
     }
 
     @Override
@@ -108,6 +119,12 @@ public class WandCoreSmithingRecipe implements SmithingRecipe {
 
     @Override
     public PlacementInfo placementInfo() {
+        if (this.placementInfo == null) {
+            // Slot szablonu (0) jest pusty (Optional.empty), wiec shift-click
+            // w stol kowalski nie probuje tam nic kladz.
+            this.placementInfo = PlacementInfo.createFromOptionals(
+                    List.of(Optional.empty(), Optional.of(this.base), Optional.of(this.addition)));
+        }
         return this.placementInfo;
     }
 
