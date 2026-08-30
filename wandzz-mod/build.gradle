@@ -1,8 +1,10 @@
 plugins {
-    // Loom 1.17.x = stabilna linia dla MC 1.21.11 (nadal wersji zamaskowanej,
-    // wiec zostaje przy "fabric-loom"; wariant bez remapowania
-    // "net.fabricmc.fabric-loom" jest dopiero od 26.1).
-    id 'fabric-loom' version "${project.loom_version}"
+    // Loom dla MC 1.21.11 (gra nadal zamaskowana) -> "fabric-loom" w linii 1.17.x.
+    // Wersja w tym bloku musi byc literalem albo sama nazwa wlasciwosci z
+    // gradle.properties (loom_version) - Gradle 9 odrzuca zapis z "project.",
+    // wywalajac "startup failed: argument list must be exactly 1 literal String
+    // or String with property replacement".
+    id 'fabric-loom' version "${loom_version}"
     id 'maven-publish'
 }
 
