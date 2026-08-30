@@ -70,6 +70,7 @@ dopasowane:
 | `RenderSystem.enableBlend()/disableBlend()` | usunięte przez rewrite renderowania (`RenderTypes`/`GpuDevice`) — ślad gestu rysowany jest bez blendu |
 | `Item#appendHoverText(ItemStack, TooltipContext, List, TooltipFlag)` | sygnatura to teraz 5 argumentów z `TooltipDisplay` i `Consumer`, metoda jest `@Deprecated` → zwykła linia tooltipa idzie przez komponent `DataComponents.LORE` (`ItemLore`) |
 | `AttachmentRegistry.builder()` | oznaczone `@Deprecated` → `AttachmentRegistry.create(id, builder -> ...)` |
+| crash przy starcie: `NullPointerException: Item id not set` | od 1.21.2 sam `Item.Properties` musi znać swój `ResourceKey<Item>` (na jego podstawie liczone jest `descriptionId` i `ITEM_MODEL`), więc `properties.setId(key)` trzeba wywołać **przed** konstruktorem przedmiotu — teraz robi to helper w `ModItems` (dokładnie jak vanilla `Items#registerItem`) |
 | pakiet `wandzz:cast` niezarejestrowany | Fabric wymaga `PayloadTypeRegistry.playC2S().register(...)` **przed** `registerGlobalReceiver`, po obu stronach — rejestracja przeniesiona do common entrypointu; usunięty błędny odbiornik klienta dla pakietu C2S (run-time `IllegalArgumentException`) |
 | `Entity#hurtServer` | `hurtServer` jest na `LivingEntity` → wzorzec `instanceof LivingEntity` zamiast rzutowania na `Entity` |
 | rzutowanie `(ServerLevel) player.level()` | `instanceof ServerLevel` (bez ryzyka `ClassCastException`) |
@@ -82,9 +83,11 @@ dopasowane:
 Wszystkie użyte nazwy klas i metod zostały sprawdzone bezpośrednio na źródłach
 Minecraft 1.21.11 z oficjalnymi mapowaniami Mojanga oraz na źródłach
 `FabricMC/fabric` w gałęzi `1.21.11` (networking + data attachment API).
-**Build nie został odpalony w tym środowisku** — sandbox ma zablokowany dostęp
-do `maven.fabricmc.net` i `services.gradle.org`, więc zależności nie da się
-pobrać. Składnia wszystkich plików jest zweryfikowana parserem Javy.
+Samo budowanie nie jest tu możliwe (sandbox ma zablokowany `maven.fabricmc.net`
+i `services.gradle.org`), więc weryfikacja idzie w pętli z maszyną developera:
+`./gradlew build` oraz `./gradlew runClient` przechodzą obecnie na 1.21.11
+(loader 0.19.3, fabric-api 0.141.6+1.21.11, JDK 21). Składnia wszystkich
+plików Javy jest dodatkowo sprawdzana parserem, a wszystkie JSONy są parsowane.
 
 Dodatkowo w `lang/en_us.json` i `lang/pl_pl.json` dopisano nazwy wszystkich
 15 core'ów oraz klucz `wandzz.core.level` (używany przez tooltip rdzeni).
@@ -93,9 +96,12 @@ Dodatkowo w `lang/en_us.json` i `lang/pl_pl.json` dopisano nazwy wszystkich
 
 - Pozostałe 13 core'ów ma tylko nazwę i poziom – potrzebują własnych zaklęć
   i efektów (analogicznie do Feather/Dragon Breath).
-- Modele/tekstury itemów (`assets/wandzz/models`, `assets/wandzz/items`,
-  `assets/wandzz/textures`) — bez nich przedmioty będą widoczne w ekwipunku,
-  ale gra zaloguje brak modelu i nie wyrenderuje ikony.
+- Modele itemów są już na miejscu (`assets/wandzz/items/*.json` jako definicje
+  klienta 1.21.4+ plus `assets/wandzz/models/item/*.json`), ale to **placeholdery**
+  na teksturach vanilla: różdżki renderują się jako patyk / `warped_fungus_on_a_stick`
+  / `blaze_rod`, a core'y jako pasujące vanillowe przedmioty (feather, dragon_breath,
+  echo_shard itd.). Własne tekstury: `assets/wandzz/textures/item/*` i podmiana
+  `layer0` w modelach.
 - GUI do wkładania core'ów w sloty różdżki (obecnie `WandItem.insertCore` to
   gotowa metoda, ale brak ekranu/przepisu craftingowego, który by z niej korzystał).
 - HUD z paskiem many.
