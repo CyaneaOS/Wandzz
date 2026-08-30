@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "wandzz",
+  "version": "${version}",
+  "name": "Wandzz",
+  "description": "Magia oparta na gestach rysowanych myszka - roznodzka, core'y i mana jako jeden spojny system.",
+  "authors": ["Ty"],
+  "contact": {},
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.wandzz.Wandzz"],
+    "client": ["com.wandzz.client.WandzzClient"]
+  },
+  "mixins": [],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
