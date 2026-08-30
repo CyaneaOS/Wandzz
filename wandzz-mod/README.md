@@ -152,6 +152,30 @@ prostu zostaje puste (bez „cichego" braku efektu).
 **Wyjmowanie**: PPM rdzeniem, gdy różdżka jest w którejś ręce (`WandInteractions`) —
 rdzeń wraca do ekwipunku, a w kreatywie nic się nie zużywa.
 
+### Wzorce gestów
+
+Dokładny kształt każdego gestu (start, kolejność wierzchołków, kierunek) jest na
+`docs/gestures.png` — wyrenderowany z tych samych punktów, które trafiają do
+`SpellRegistry`, więc to jest źródło prawdy 1:1.
+
+Współrzędne wzorców (przestrzeń robocza ±100, oś Y w dół; rozpoznawanie jest
+niezależne od skali i obrotu):
+
+| gest | punkty wzorca (w tej kolejności) | typ |
+|---|---|---|
+| `strike` | `(-100,-80) (0,80) (100,-80)` | otwarty |
+| `torch` | `(0,100) (0,-80) (20,-100)` | otwarty |
+| `break_block` | `(-100,-100) (100,-100) (100,100) (-100,100) (-100,-100) (100,100)` | zamknięty |
+| `fireball` | `(0,-100) (100,100) (-100,100) (0,-100)` | zamknięty |
+| `teleport` | `(-100,-100) (20,-100) (-60,0) (100,0) (-20,100) (100,100)` | otwarty |
+| `bomb` | `(-100,-100) (100,100) (100,-100) (-100,100)` | otwarty |
+| `dragon_breath` | spirala `r = 100·i/48`, `φ = 4π·i/48`, i = 0…48 (od środka) | otwarty |
+
+Ważne: **podnoszenie myszy nie przerywa rysowania** — `CastingScreen` zbiera ruch
+ciągle, więc „powrót" kursora (np. z dołu prawego do górnego prawego przy X) jest
+częścią gestu i dlatego wzorce mają te dodatkowe krawędzie. Rysuj jednym
+ruchem, nie odrywając ręki od PPM.
+
 ### Rzucanie
 
 PPM z różdżką → rysujesz gest → puszczenie PPM = wysyłka na serwer. Każde
