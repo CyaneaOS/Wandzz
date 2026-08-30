@@ -116,6 +116,9 @@ public class WandCoreSmithingRecipe implements SmithingRecipe {
         return SERIALIZER;
     }
 
+    /** RecipeSerializer#streamCodec() jest @Deprecated w vanilla, ale interfejs
+     *  nadal go wymaga - wyciszamy notatke z logu builda. */
+    @SuppressWarnings("deprecation")
     public static class Serializer implements RecipeSerializer<WandCoreSmithingRecipe> {
 
         private static final MapCodec<WandCoreSmithingRecipe> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(

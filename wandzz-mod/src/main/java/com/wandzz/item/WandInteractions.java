@@ -1,5 +1,6 @@
 package com.wandzz.item;
 
+import com.wandzz.core.WandCoreItem;
 import com.wandzz.wand.WandItem;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.network.chat.Component;
