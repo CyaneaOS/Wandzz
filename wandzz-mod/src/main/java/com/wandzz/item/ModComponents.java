@@ -1,11 +1,18 @@
 package com.wandzz.item;
 
+import com.wandzz.Wandzz;
 import com.wandzz.wand.WandData;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
+import java.util.function.UnaryOperator;
+
+/**
+ * Custom data component (Item Components, MC 1.20.5+) przechowujace dane
+ * rozdzki: material + zainstalowane core'y.
+ */
 public final class ModComponents {
 
     public static final DataComponentType<WandData> WAND_DATA = register(
@@ -14,10 +21,10 @@ public final class ModComponents {
     );
 
     private static <T> DataComponentType<T> register(String path,
-            java.util.function.UnaryOperator<DataComponentType.Builder<T>> builderOp) {
+            UnaryOperator<DataComponentType.Builder<T>> builderOp) {
         return Registry.register(
                 BuiltInRegistries.DATA_COMPONENT_TYPE,
-                ResourceLocation.fromNamespaceAndPath("wandzz", path),
+                Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, path),
                 builderOp.apply(DataComponentType.builder()).build()
         );
     }

@@ -4,7 +4,7 @@ import com.wandzz.core.CoreType;
 import com.wandzz.spell.Spell;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.DragonFireball;
+import net.minecraft.world.entity.projectile.hurtingprojectile.DragonFireball;
 import net.minecraft.world.phys.Vec3;
 
 /**

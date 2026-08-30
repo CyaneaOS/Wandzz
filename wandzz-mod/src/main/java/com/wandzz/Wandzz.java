@@ -2,6 +2,7 @@ package com.wandzz;
 
 import com.wandzz.item.ModComponents;
 import com.wandzz.item.ModItems;
+import com.wandzz.mana.ManaAttachments;
 import com.wandzz.network.CastingHandler;
 import com.wandzz.spell.Spells;
 import net.fabricmc.api.ModInitializer;
@@ -28,6 +29,7 @@ public class Wandzz implements ModInitializer {
         ModComponents.bootstrap();
         ModItems.bootstrap();
         Spells.bootstrap();
+        ManaAttachments.bootstrap();
         CastingHandler.register();
 
         // Regeneracja many wszystkich graczy co tick serwera.

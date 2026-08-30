@@ -1,4 +1,7 @@
 plugins {
+    // Loom 1.17.x = stabilna linia dla MC 1.21.11 (nadal wersji zamaskowanej,
+    // wiec zostaje przy "fabric-loom"; wariant bez remapowania
+    // "net.fabricmc.fabric-loom" jest dopiero od 26.1).
     id 'fabric-loom' version "${project.loom_version}"
     id 'maven-publish'
 }
@@ -11,7 +14,7 @@ base {
 }
 
 repositories {
-    // Dodaj tu wlasne repozytoria jesli beda potrzebne
+    // Loom sam dodaje maven.fabricmc.net i biblioteki Mojang - tu tylko wlasne repo.
 }
 
 loom {
@@ -34,19 +37,49 @@ dependencies {
 }
 
 processResources {
-    inputs.property "version", project.version
+    // Gradle 9: nie odpytujemy `project` w srodku konfiguracji taska.
+    def version = project.version
+    inputs.property "version", version
 
     filesMatching("fabric.mod.json") {
-        expand "version": project.version
+        expand "version": version
     }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
+    options.release = 21
+    // Zrodla sa ASCII, ale jawne ustawienie encodingu chroni przed
+    // "unmappable character" na systemach z inna domyslna strona kodowa (Windows-1250).
+    options.encoding = "UTF-8"
 }
 
 java {
+    // Loom dolaczy sourcesJar do remapSourcesJar + taska "build".
     withSourcesJar()
+
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+    def projectName = project.name
+    inputs.property "projectName", projectName
+
+    from("LICENSE") {
+        rename { "${it}_${projectName}" }
+    }
+}
+
+// configure the maven publication
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            artifactId = project.archives_base_name
+            from components.java
+        }
+    }
+
+    repositories {
+        // Repozytoria, do ktorych PUBLIKUJEMY (nie te, z ktorych sciagamy).
+    }
 }

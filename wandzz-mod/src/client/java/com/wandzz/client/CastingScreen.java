@@ -1,6 +1,5 @@
 package com.wandzz.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.wandzz.gesture.CastingData;
 import com.wandzz.gesture.Point;
 import com.wandzz.network.CastPayload;
@@ -10,6 +9,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import org.lwjgl.glfw.GLFW;
 
@@ -23,8 +23,16 @@ import java.util.Optional;
  *
  * PPM wcisniety -> startCasting() -> zbieranie Point -> PPM puszczony
  * -> rozpoznawanie gestu -> CastPayload -> serwer
+ *
+ * Minecraft 1.21.11:
+ *  - obsluga myszy przeszla na obiekty zdarzen: {@code mouseReleased(MouseButtonEvent)}
+ *    zamiast {@code mouseReleased(double, double, int)},
+ *  - {@code RenderSystem#enableBlend/disableBlend} zniknely wraz z rewrite'em
+ *    renderowania (RenderTypes/GpuDevice), dlatego slad rysujemy bez blendu.
  */
 public class CastingScreen extends Screen {
+
+    private static final int TRAIL_COLOR = 0xFFAA33FF;
 
     private final CastingData castingData = new CastingData();
 
@@ -45,12 +53,12 @@ public class CastingScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (event.button() == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             finishCasting();
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
@@ -90,13 +98,9 @@ public class CastingScreen extends Screen {
         List<Point> pts = castingData.currentPoints();
         if (pts.size() < 2) return;
 
-        RenderSystem.enableBlend();
         for (int i = 1; i < pts.size(); i++) {
-            Point a = pts.get(i - 1);
-            Point b = pts.get(i);
-            drawLine(context, a, b, 0xFFAA33FF);
+            drawLine(context, pts.get(i - 1), pts.get(i), TRAIL_COLOR);
         }
-        RenderSystem.disableBlend();
     }
 
     private void drawLine(GuiGraphics context, Point a, Point b, int color) {

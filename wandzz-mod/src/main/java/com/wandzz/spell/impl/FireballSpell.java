@@ -3,13 +3,17 @@ package com.wandzz.spell.impl;
 import com.wandzz.spell.Spell;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.SmallFireball;
+import net.minecraft.world.entity.projectile.hurtingprojectile.SmallFireball;
 import net.minecraft.world.phys.Vec3;
 
 /**
  * Przykladowe zaklecie z diagramu w dokumencie projektowym:
  * gracz rysuje gest -> $1 -> rozpoznany wzor -> Fireball -> sprawdzenie
  * wymagan -> CAST. Powiazane z core'em FLAME (lvl 2).
+ *
+ * Minecraft 1.21.11 przeorganizowal pakiety pociskow: klasy z
+ * net.minecraft.world.entity.projectile trafiaja do podpakietow
+ * (tu: .hurtingprojectile).
  */
 public class FireballSpell implements Spell {
 
