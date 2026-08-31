@@ -1,12 +1,18 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "ingredients": [
-    "minecraft:amethyst_shard",
-    "minecraft:feather"
+  "pattern": [
+    "FFF",
+    "FUF",
+    "FFF"
   ],
+  "key": {
+    "F": "minecraft:feather",
+    "U": "minecraft:rabbit_foot"
+  },
   "result": {
     "count": 1,
     "id": "wandzz:core_feather"
-  }
+  },
+  "note": "8 pi\u00f3r + wlos jednoroza; do wejscia jednoroza U = rabbit_foot"
 }
