@@ -40,7 +40,7 @@ public class ChronosBoss extends PathfinderMob {
     /**
      * Bez lancucha {@code (ServerBossEvent) new ServerBossEvent(...).setDarkenScreen(true)}:
      * {@code setDarkenScreen} zwraca {@code BossEvent}, a nie {@code ServerBossEvent},
-     * więc taki zapis opiera sie wylacznie na kowariantnym nadpisaniu w vanilla.
+     * wiec taki zapis opiera sie wylacznie na kowariantnym nadpisaniu w vanilla.
      * Ustawiamy flage w konstruktorze i nie zalezymy od typu zwrotu.
      */
     private final ServerBossEvent bossEvent = new ServerBossEvent(
