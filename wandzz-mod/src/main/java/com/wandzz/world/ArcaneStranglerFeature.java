@@ -15,6 +15,9 @@ import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+import net.minecraft.world.phys.AABB;
+import java.util.ArrayList;
+import java.util.List;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -65,8 +68,13 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
     /** Glebokoosc, z jaka wchodzimy w korone gospodarza (od jej dolnej krawedzi). */
     private static final int HELIX_DIVE = 2;
 
-    /** Szansa na ducha arkanu w nowej koronie. */
-    private static final double SPRITE_CHANCE = 0.34;
+    /**
+     * Szansa na ducha arkanu w nowej koronie. Dawniej 0.34, czyli co trzecie
+     * drzewo mialo wisiorka - las wygladal jak choinka z dekoracjami. 0.09 to
+     * okolo jednego duha na 11 drzew: duha sie szuka, ale da sie go znalezc,
+     * a "to drzewo jest magiczne" nadal cos znaczy, bo nie kazde jest.
+     */
+    private static final double SPRITE_CHANCE = 0.09;
 
     /** Zasieg szukania pnia gospodarza w dol, przez liscie. */
     private static final int HOST_LOOKDOWN = 24;
@@ -107,8 +115,11 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
             crownY = helixTop + 1;
         }
 
-        placeCanopy(level, random, new BlockPos(crownX, crownY, crownZ));
-        maybeSpawnSprite(level, random, new BlockPos(crownX, crownY + 1, crownZ));
+        final List<BlockPos> rim = new ArrayList<>();
+        placeCanopy(level, random, new BlockPos(crownX, crownY, crownZ), rim);
+        // kotwica duha = brzeg korony, nie srodek - patrz pickPerch
+        maybeSpawnSprite(level, random,
+                pickPerch(level, random, rim, new BlockPos(crownX, crownY - 2, crownZ)));
         return true;
     }
 
@@ -170,7 +181,8 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
      * {@code center} to slupek ostatniego loga; korona schodzi w dol od niego o
      * trzy warstwy i ma czubek jeden blok wyzej.
      */
-    private void placeCanopy(final WorldGenLevel level, final RandomSource random, final BlockPos center) {
+    private void placeCanopy(final WorldGenLevel level, final RandomSource random, final BlockPos center,
+            final List<BlockPos> rimOut) {
 
         for (int layer = 0; layer < 4; layer++) {
             final int radius = layer <= 1 ? 3 : layer == 2 ? 2 : 1;
@@ -181,11 +193,14 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
                     if (corner && random.nextFloat() < (layer == 3 ? 0.9F : 0.45F)) {
                         continue;
                     }
-                    place(level, base.offset(dx, 0, dz), leafState(false));
+                    final BlockPos pos = base.offset(dx, 0, dz);
+                    if (layer >= 2 && place(level, pos, leafState())) {
+                        rimOut.add(pos);
+                    }
                 }
             }
         }
-        place(level, center.above(1), leafState(false));
+        place(level, center.above(1), leafState());
 
         // "koncowki" zwisajace z krawedzi - to one sprzedaja ksztalt drzewa
         // magicznego, a nie debowego
@@ -198,7 +213,7 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
             final int length = 1 + random.nextInt(3);
             for (int d = 0; d < length; d++) {
                 pos = pos.below();
-                if (!place(level, pos, leafState(true))) {
+                if (!place(level, pos, leafState())) {
                     break;
                 }
             }
@@ -221,12 +236,21 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
             return;
         }
         final ServerLevel serverLevel = level.getLevel();
+        // Jedno drzewo = jeden duch. Sadzonka kielkuje na koronie i potrafi
+        // dorzucic drugiego duha do TEJ samej korony - stad sprawdzenie, czy juz
+        // ktorys wisi (inaczej mialbysmy dwa wisiorka na jednym drzewie).
+        if (!serverLevel.getEntitiesOfClass(ArcaneSprite.class, new AABB(perch).inflate(7.5, 9.0, 7.5),
+                ArcaneSprite::isPerched).isEmpty()) {
+            return;
+        }
         final @Nullable ArcaneSprite sprite =
                 ModEntities.ARCANE_SPRITE.create(serverLevel, EntitySpawnReason.STRUCTURE);
         if (sprite == null) {
             return;
         }
-        sprite.snapTo(perch.getX() + 0.5, perch.getY() + 0.5, perch.getZ() + 0.5,
+        // perch to srodek bloku liscia; -0.3 znaczy "pod dolna krawedzia", wiec
+        // duch wisi PO korona, a nie jest w niej zakopany
+        sprite.snapTo(perch.getX() + 0.5, perch.getY() - 0.3, perch.getZ() + 0.5,
                 random.nextFloat() * 360.0F, 0.0F);
         sprite.startPerching();
         level.addFreshEntity(sprite);
@@ -279,8 +303,17 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
         return ModBlocks.ARCANE_LOG.defaultBlockState();
     }
 
-    private static BlockState leafState(final boolean persistent) {
-        return ModBlocks.ARCANE_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, persistent);
+    /**
+     * WSZYSTKIE liscie arkanskiego drzewa sa persistent - i to nie lenistwo.
+     * LeavesBlock ma domyslnie DISTANCE=7, a gnicie liczy sie tylko z pary
+     * DISTANCE==7 && !PERSISTENT. Feature kladacy blok przez
+     * LevelWriter#setBlock NIE przechodzi przez onPlace/updateDistance, wiec
+     * DISTANCE zostaje 7 i kazdy lisc, ktory doczekal random tiera, znikal -
+     * to wlasnie byly "znikajace liscie w niektorych miejscach". Persistent
+     * odcina te sciezke calkowicie, a do drzewa, ktore nie chce gnic, pasuje.
+     */
+    private static BlockState leafState() {
+        return ModBlocks.ARCANE_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true);
     }
 
     /**

@@ -116,7 +116,8 @@ dopasowane:
 | `registerDefaultState(this.stateDefinition.any())` | pola `stateDefinition` nie widać z podklasy; idiom vanilli (`RedstoneLampBlock`) to `registerDefaultState(this.defaultBlockState().setValue(LIT, false))` |
 | `Level#getHeightmap(...)` | nie ma takiego wywołania: jest `Level#getHeight(Heightmap.Types, int x, int z)` (ewentualnie `getHeightmapPos`); pozycję platformy bramy liczymy z niego |
 | własne PNG dla „znaleziska w lawie“ | zbędne: `minecraft:block/cube_all` z `minecraft:block/crying_obsidian` / `minecraft:block/shroomlight` – ten sam trik co przy stoliku (`cube_bottom_top` + `crafting_table_top`), zero assetów do odgadywania |
-| `MobRenderer<ArcaneSprite, ArcaneSpriteRenderState>` – „wrong number of type arguments; required 3” | w 1.21.9+ `MobRenderer` ma **trzy** parametry: `<T extends Mob, S extends LivingEntityRenderState, M extends EntityModel<S>>` (trzeci po to, by `getModel()` zwracał model o znanym typie). `EntityRenderer` nadal dwa – stąd mylący komunikat. Wszystkie `@Override: method does not override` i `cannot find symbol: variable super` były kaskadą po uszkodzonej deklaracji nadklasy, nie osobnymi błędami. `MobRenderState` w 1.21.11 nie istnieje – stan po `LivingEntityRenderState`, tak jak `BatRenderState` |
+| Liście arkanskiego drzewa znikały „w niektórych miejscach” | `LeavesBlock` ma **domyślnie `DISTANCE=7`**, a `decaying()` to `DISTANCE==7 && !PERSISTENT`. `Feature#setBlock` pomija `onPlace`/`updateDistance`, więc liść urodzony w feature'zu jest formalnie „daleko od pnia” i znika przy pierwszym random ticku. U nas cała korona jest `persistent` (patrz `ArcaneStranglerFeature#leafState`) |
+| `MobRenderer<ArcaneSprite, ArcaneSpriteRenderState>` – „wrong number of type arguments; required 3” | W 1.21.9+ `MobRenderer` ma **trzy** parametry: `<T extends Mob, S extends LivingEntityRenderState, M extends EntityModel<S>>` (trzeci, by `getModel()` zwracał model o znanym typie). `EntityRenderer` nadal dwa — stąd mylący komunikat. Cztery `@Override does not override` i `cannot find symbol: variable super` były kaskadą po uszkodzonej deklaracji nadklasy, nie osobnymi błędami. `MobRenderState` w 1.21.11 nie istnieje: stan po `LivingEntityRenderState`, tak jak `BatRenderState` |
 
 Wszystkie użyte nazwy klas i metod zostały sprawdzone bezpośrednio na źródłach
 Minecraft 1.21.11 z oficjalnymi mapowaniami Mojanga oraz na źródłach
@@ -359,38 +360,48 @@ PPM z różdżką → rysujesz gest → puszczenie PPM = wysyłka na serwer. Ka�
 odrzucone rzucenie mówi dlaczego (brak różdżki / różdżka bez rdzenia / rdzeń za
 niskiego poziomu / za mało many / gest nierozpoznany).
 
-## Drzewa, duch arkanu i żywica (nowa mechanika, nie naprawka)
+## Drzewa, duch arkanu i żywica
 
-- Korona: trzy warstwy 7x7, czwarta 3x3, czubek plus 3–5 wiszących kosmyków;
-  naroża bywają odpuszczone, żeby brzeg był postrzępiony. Kosmyki mają
-  `persistent=true`, więc nie gniją poza zasięgiem pnia.
+- Korona: trzy warstwy 7×7, czwarta 3×3, czubek plus 3–5 wiszących kosmyków;
+  naroża bywają odpuszczone, żeby brzeg był postrzępiony. **Wszystkie** liście
+  są `persistent=true` — `LeavesBlock` ma domyślnie `DISTANCE=7`, a gnicie liczy
+  się tylko z pary `DISTANCE==7 && !PERSISTENT`; feature kładący blok przez
+  `LevelWriter#setBlock` nie przechodzi przez `onPlace`/`updateDistance`, więc
+  DISTANCE zostawało 7 i liście znikały przy pierwszym random ticku. To była
+  przyczyna „liście znikają w niektórych miejscach", nie szczękościsk dwóch
+  drzew.
 - Kształt opisuje Java (`ArcaneStranglerFeature`), nie JSON: vanilla
   `blob_foliage_placer` nie umie ani zwisania, ani spirali. Rejestr idzie jako
   `wandzz:arcane_strangler`, a `configured_feature/arcane_tree.json` tylko je
   wywołuje (ten sam feature obsługuje generowanie świata i wzrost z sadzonki).
 - Sadzonka na koronie innego drzewa NIE przebija gospodarza: feature schodzi do
-  dolnej krawędzi jego korony i wspina się spiralą (~35,5° na blok, pełny obrót
-  na ~10 bloków) dookoła pnia, a własną koronę stawia nad tamtą. Logi trafiają
-  tylko tam, gdzie pozwala `TreeFeature.validTreePos` — pień gospodarza nigdy
-  nie zostaje nadpisany.
-- `wandzz:arcane_sprite` wisi głową w dół w koronie i jest markerem „to drzewo
-  jest magiczne". ~34% nowo postawionych drzew dostaje ducha; zabity daje 1–2
-  żywicy; oswojony (PPM arcanym patykiem) zostaje i co 200 s zrzuca żywicę pod
-  siebie; naturalnie spawnuje tylko obok drzewa i nie despawni po odejściu.
-- `wandzz:arcane_resin` NIE jest nową „większą różdżką" — prawy klik trzyma ją na
-  różdżce. Nabita dostaje +1 slot rdzeni (arcane: 5/7 zamiast 4/6), ×1,2
-  regeneracji many (liczone po wyborze najsilniejszego rdzenia, więc słaby
-  zestaw nie kasuje bonus) oraz szybkie zapalenie bramy: PPM w zimny ember
-  odpala go od ręki (40 many, rdzeń lvl 3, bez gestu). Sneak+PPM to nadal
-  stara ścieżka gestu.
-- Modele blockstates: `arcane_log`/`arcane_log_horizontal` rodziców się do
-  `minecraft:block/cube_column[_horizontal]` (wcześniej `blocks/block`, czyli
-  klocka), `arcane_leaves` do `minecraft:block/leaves`, sapling do crossa.
-- Placeholdery tekstur (`assets/wandzz/textures/{block,item,entity}`, 6 PNG)
-  są po to, żeby kształt było widać w grze. Liscie są szare celowo: mnoży je
-  tint z `ColorProviderRegistry.BLOCK` w `WandzzClient` — chcesz malować
-  fiolet recznie, wywal te jedna linie. Tekstura encji musi miec 32x32
-  (`LayerDefinition.create(mesh, 32, 32)` definiuje skale UV).
+  dolnej krawędzi jego korony i wspina się spiralą (~35,5° na blok) dookoła pnia,
+  a własną koronę stawia nad tamtą. Logi trafiają tylko tam, gdzie pozwala
+  `TreeFeature.validTreePos` — pień gospodarza nigdy nie zostaje nadpisany.
+- `wandzz:arcane_sprite`: **9%** nowej korony (było 34% — las wyglądał jak
+  dekorowany), maksymalnie **jeden duch na drzewo** (sadzonka na cudzej koronie
+  potrafiła dorzucić drugiego), i wisi **pod dolną krawędzią liścia na rancie
+  korony**, nie w jej środku — zarówno przy spawnie z feature'a, jak i przy
+  powrocie po walce (`ArcaneSprite#hangUnder` liczy `pos.getY() - 0.3`, bo
+  model liczony jest od stóp w górę).
+- **Żywica bierze się z okorowywania, nie z zabijania.** PPM toporkiem
+  (`#minecraft:axes`) w `wandzz:arcane_log` zdejmują korę: blok zamienia się w
+  `wandzz:arcane_log_stripped` (odwracalne — da się postawić z powrotem),
+  toporek traci 1 trwałość, a z pnia wypływa żywica. Szansa: **100%** (plus
+  25% na drugą kroplę), jeśli w koronie wisi żywy duch; **45%**, jeśli nie.
+  Zabicie ducha więc NIE jest drogą do żywicy, tylko sposobem jej utraty.
+  Loot table ducha po zabiciu jest pusty `{"pools": []}` — świadomie.
+- Brak licznika uderzeń w stanie bloku to decyzja, nie niedoróbka: limit wynosi
+  „jedno okorowanie na pień", a stan nosi sam blok, więc nie ma czego
+  zapisywać, synchronizować ani psuć przemieszczaniem drzewa.
+- `wandzz:arcane_resin` ma własną klasę (`ArcaneResinItem`) tylko po to, żeby
+  tooltip tłumaczył mechanikę w grze (dwie linie, oba klucze użyte — kontrolka
+  wywala martwe klucze lang).
+- Placeholdery tekstur (`assets/wandzz/textures/{block,item,entity}`, 7 PNG) są
+  po to, żeby kształt było widać w grze. Liście są szare celowo: mnoży je tint z
+  `ColorProviderRegistry.BLOCK` w `WandzzClient` — chcesz malować fiolet
+  ręcznie, wywal tę jedną linię. Tekstura encji musi mieć 32×32
+  (`LayerDefinition.create(mesh, 32, 32)` definiuje skalę UV).
 
 ## Czego brakuje / co warto dopracować dalej
 

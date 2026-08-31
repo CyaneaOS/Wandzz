@@ -33,7 +33,8 @@ import java.util.function.Function;
  */
 public final class ModBlocks {
 
-    public static RotatedPillarBlock ARCANE_LOG;
+    public static ArcaneLogBlock ARCANE_LOG;
+    public static RotatedPillarBlock ARCANE_LOG_STRIPPED;
     public static Block ARCANE_PLANKS;
     public static LeavesBlock ARCANE_LEAVES;
     public static ArcaneSaplingBlock ARCANE_SAPLING;
@@ -41,7 +42,14 @@ public final class ModBlocks {
     public static ArcaneEmberBlock ARCANE_EMBER;
 
     public static void bootstrap() {
+        // Pien REAGUJE na toporek: okorowywanie jest zrodlem zywicy (patrz
+        // ArcaneLogBlock). Okorowany odpowiednik to juz zwykly RotatedPillarBlock -
+        // nie daje wiecej zywicy i wlasnie to jest widoczny limit mechaniki. Celowo
+        // ZERO licznika uderzen w stanie bloku: stan nosi sam blok, wiec nie ma czego
+        // zapisywac, synchronizowac ani psuc przy przesuwaniu drzewa tlumikiem.
         ARCANE_LOG = register("arcane_log",
+                props -> new ArcaneLogBlock(props.strength(2.0f, 2.0f)));
+        ARCANE_LOG_STRIPPED = register("arcane_log_stripped",
                 props -> new RotatedPillarBlock(props.strength(2.0f, 2.0f)));
         ARCANE_PLANKS = register("arcane_planks",
                 props -> new Block(props.strength(2.0f, 3.0f)));

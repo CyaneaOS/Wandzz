@@ -69,7 +69,7 @@ public final class ModItems {
         }
 
         ResourceKey<Item> resinKey = itemKey("arcane_resin");
-        ARCANE_RESIN = new Item(new Item.Properties().stacksTo(16).setId(resinKey));
+        ARCANE_RESIN = new ArcaneResinItem(new Item.Properties().stacksTo(16).setId(resinKey));
         Registry.register(BuiltInRegistries.ITEM, resinKey, ARCANE_RESIN);
 
         ResourceKey<Item> bookKey = itemKey("spell_book");

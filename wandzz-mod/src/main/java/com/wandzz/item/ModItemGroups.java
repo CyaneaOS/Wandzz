@@ -56,6 +56,7 @@ public final class ModItemGroups {
                     output.accept(ModItems.SPELL_BOOK);
                     // 5. Bloki arkanum: drewno, sadzonka, liscie, stol i zar.
                     output.accept(ModBlocks.ARCANE_LOG.asItem());
+                    output.accept(ModBlocks.ARCANE_LOG_STRIPPED.asItem());
                     output.accept(ModBlocks.ARCANE_PLANKS.asItem());
                     output.accept(ModBlocks.ARCANE_LEAVES.asItem());
                     output.accept(ModBlocks.ARCANE_SAPLING.asItem());

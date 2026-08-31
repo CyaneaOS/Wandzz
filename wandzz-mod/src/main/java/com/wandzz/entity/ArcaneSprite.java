@@ -196,18 +196,39 @@ public class ArcaneSprite extends PathfinderMob {
     }
 
     /** Skok w gore, az nad sobie trafi w liscie arkanskiego drzewa. */
+    /**
+     * Skok w gore, az nad soba trafi w liscie arkanskiego drzewa. Wolamy lisc z
+     * POWIETRZEM pod spodem, bo to jest dolna krawedz korony - tylko tam duh
+     * wyglada na wiszacego; srodek korony wyglada na "stoi w drzewie" (wlasnie
+     * tak to wczesniej bylo). Gdyby cala korona byla zbita (brzeg zasloniety),
+     * bierzemy pierwszy napotkany lisc.
+     */
     private void tryToPerch(final ServerLevel level) {
         final BlockPos base = this.blockPosition();
+        BlockPos firstAny = null;
         for (int dy = 1; dy <= 7; dy++) {
             final BlockPos pos = base.above(dy);
-            if (level.getBlockState(pos).is(ModBlocks.ARCANE_LEAVES)) {
-                this.setPos(pos.getX() + 0.5, pos.getY() + 0.55, pos.getZ() + 0.5);
-                this.startPerching();
+            if (!level.getBlockState(pos).is(ModBlocks.ARCANE_LEAVES)) {
+                continue;
+            }
+            if (level.getBlockState(pos.below()).isAir()) {
+                this.hangUnder(pos);
                 return;
             }
+            if (firstAny == null) {
+                firstAny = pos;
+            }
+        }
+        if (firstAny != null) {
+            this.hangUnder(firstAny);
         }
     }
 
+    /** Pozycja "pod dolna krawedzia bloku" + stan wiszenia (bez grawitacji). */
+    private void hangUnder(final BlockPos leaf) {
+        this.setPos(leaf.getX() + 0.5, leaf.getY() - 0.3, leaf.getZ() + 0.5);
+        this.startPerching();
+    }
     // ------------------------------------------------------------------
     // Interakcje
     // ------------------------------------------------------------------
