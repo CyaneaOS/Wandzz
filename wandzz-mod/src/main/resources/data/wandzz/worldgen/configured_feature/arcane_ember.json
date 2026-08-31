@@ -6,7 +6,7 @@
     "targets": [
       {
         "target": {
-          "predicate_type": "minecraft:match_block",
+          "predicate_type": "minecraft:block_match",
           "block": "minecraft:lava"
         },
         "state": {
