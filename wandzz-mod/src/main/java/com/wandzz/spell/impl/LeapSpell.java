@@ -25,7 +25,7 @@ public final class LeapSpell implements Spell {
 
     @Override
     public String id() {
-        return "leap";
+        return "wandzz:leap";
     }
 
     @Override

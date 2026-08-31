@@ -27,7 +27,7 @@ public final class HealSpell implements Spell {
 
     @Override
     public String id() {
-        return "heal";
+        return "wandzz:heal";
     }
 
     @Override
