@@ -162,6 +162,82 @@ na pol godziny. Dwie nagrody, obie odczuwalne w tej samej sekundzie:
   bar, a HUD dokleja ` - zgranie II` do etykiety paska many.
 - Trzecia linia tooltipa `wandzz:arcane_resin` tlumaczy zasade w grze, bez
   czytania README.
+## Gestury: czemu taki kształt, a nie inny
+
+Zmiana wymuszona przez pomiar, nie przez gust. `strike` i `leap` były **tym samym
+kształtem** (oba „V"), więc `leap` wygrywał w 10% prób - a `break_block` (kwadrat z
+przekątną) był po normalizacji trójkątem z ogonem i przegrywał z kulą ognia. Zamiast
+dobierać kształty „na oko", port algorytmu wjechał do repo:
+
+```
+python3 wandzz-mod/tools/gesture_set.py          # ocena zestawu z repo
+python3 wandzz-mod/tools/gesture_set.py --sync   # porównaj z GestureTemplates.java
+```
+
+Model rysowania nie jest biały-szumowy: suchy szum wygląda pięknie i nic nie znaczy.
+Jest **dryf brownowski** (ręka myli się wolno zmiennym przesunięciem), losowa skala
+0,5-1,7, obrót ±25° i **ucięty ogon** (gracz puszcza PPM sekundę wcześniej). Na tym
+modelu, przy 40 próbach na kształt:
+
+| zestaw | koszyk lvl 1 | koszyk lvl 2 | pełny (10 kształtów) |
+|---|---|---|---|
+| stary (to, co było w grze) | ~96% | **73,5%** | **69,7% + 11,5% złych rzuceń** |
+| nowy (zmierzony, poniżej) | 99,4% | 95,6% | **92,5%, zero złych rzuceń** |
+
+Ten sam zestaw nie zmienił się o włos - zmieniły się dwie zapory w rozpoznawaniu:
+
+1. **Koszyk.** `CastingScreen#castableIds` czyta komponent `wandzz:wand_data` z
+   trzymanej różdżki (serwer i tak go synchronizuje) i rozpoznaje **tylko wśród
+   czarów, które twoje rdzenie udostępniają** - ten sam warunek `Spell#isProvidedBy`,
+   który sprawdza serwer. 10 kształtów walczy ze sobą; 4 nie walczą.
+2. **Margines.** `DollarOneRecognizer.AMBIGUITY_MARGIN = 0.035`: jeśli lider wyprzedza
+   wicelidera o mniej, gest jest **odrzucony** z komunikatem
+   `wandzz.gesture.ambiguous` („narysuj większy i wyrazniejszy"), a nie rzucony
+   byle jak. Pomyłka jest nie do naprawienia (dostałes nie ten czar, którego nie chciałeś),
+   odmowa jest do naprawienia (rysujesz jeszcze raz). Stąd 7,5% „odmów" w koszyku
+   pełnym zamiast 11,5% złych czarów.
+
+Obniżony próg ze zgrania **nie** ignoruje marginesu - zgranie pomaga na drżenie ręki,
+nie na niejednoznaczność.
+
+### Co rysować (10 czarów)
+
+| czar | gest | ile segmentów |
+|---|---|---|
+| `strike` | „V" - młotek w podłogę | 2 |
+| `break_block` | kratka „#" jednym pociągnięciem | 4 |
+| `torch` | świeczka: podstawa, płomień, powrót | 4 |
+| `leap` | podbieg + garb + lądowanie (przeskoczona przeszkoda) | 4 |
+| `heal` | **kółko** | 32 próbkowane |
+| `fireball` | „burst" - dziesięciokąt z pięcioma wklęśnięciami | 10 |
+| `dragon_breath` | fala z dwoma garbami (spirala wypadła: patrz niżej) | 44 próbki |
+| `open_gate` | **otwarty łuk** nad ziemią | 22 próbki |
+| `teleport` | **dwa kwadraty połączone kreską** | 9 |
+| `bomb` | romb z kreską w środku | 6 |
+
+Trzy ofiary, o których warto wiedzieć:
+* `dragon_breath` był spiralą i **w ogóle nie dawał się rzucić** - po resamplingu do
+  64 punktów kształt spirali zależy od tego, kiedy puścisz przycisk, średni wynik
+  spadał do 0,68, czyli pod próg. Fala ma garby zawsze.
+* `bomb` był literą „X" - po ucięciu ogona zostaje z niej „V", czyli `strike`.
+* `heal` (kółko) i `open_gate` (łuk) to ten sam rod krzywizn; dlatego brama jest
+  **otwarta**, a nie domknięta w prostokąt - prostokąt po normalizacji to kółko.
+
+## Wiązanka jednorożców: czemu się nie respiła
+
+Błąd po naszej stronie, nie w data packu: `minecraft:heightmap` w placed feature
+podaje **Y pierwszego powietrza nad powierzchnią**, a nie bloku powierzchni.
+`GladeFeature` pytał o blok w tym punkcie, dostawał powietrze i grzecznie
+`return false` - na każdym chuście. Naprawione skanem w dół (`findGround`,
+maks. 8 bloków w dół; śnieg, lód i warstwa liści nie odrzucają już glady), to samo
+w `ChronosAltarFeature` (`findPadGround`, inacej ołtarz unosiłby się blok nad
+ziemia i boss wpadał w ścianę).
+
+Częstotliwość podkręcona: `unicorn_glade` 1 na 8 chunków (było 1/48),
+`chronos_altar` 1 na 40. **Feature'i generują się tylko w nowych chunkach** - nie
+zobaczysz ich w eksplorowanym terenie, leć na dziewiczy albo załóż nowy świat.
+Nie ma `/locate`, bo to feature, nie struktura.
+
 ## Rdzenie, jednorożec, feniks, Chronos i magiczna różdżka
 
 Runda, w której wszystkie rdzenie mają wreszcie **źródło**, a nie tylko przepis.

@@ -56,9 +56,14 @@ public class GladeFeature extends Feature<NoneFeatureConfiguration> {
         final RandomSource random = context.random();
         final BlockPos origin = context.origin();
 
-        final BlockState ground = level.getBlockState(origin);
-        if (!ground.is(Blocks.GRASS_BLOCK) && !ground.is(Blocks.DIRT)) {
-            // glada nie wisi w powietrzu ani nie wchodzi w skale - wroc pozniej
+        // DLACZEGO wczesniej glada sie nie respi: placement typu "heightmap" podaje
+        // Y PIERWSZEGO POWIETRZA nad powierzchnia, a nie bloku tej powierzchni - a
+        // ja pytalem o blok w tym punkcie, czyli zawsze o powietrze. Stad skan w dol
+        // (maks. 8 blokow), zeby snieg, lod i sciolka lisci nie odcinaly glady od
+        // swiata - to one sa najczestszym "powodem, dla ktorego nic nie wyszlo".
+        final @Nullable BlockPos surface = findGround(level, origin);
+        if (surface == null) {
+            // nie ma ziemi (skaa, woda, urwisko) - nie bedziemy malowac w powietrzu
             return false;
         }
 
@@ -69,7 +74,7 @@ public class GladeFeature extends Feature<NoneFeatureConfiguration> {
                 if (dist > radius) {
                     continue;
                 }
-                final BlockPos groundPos = origin.offset(dx, 0, dz);
+                final BlockPos groundPos = surface.offset(dx, 0, dz);
                 final BlockPos above = groundPos.above();
                 if (!level.getBlockState(groundPos).is(Blocks.GRASS_BLOCK)
                         || !level.getBlockState(above).isAir()) {
@@ -90,8 +95,32 @@ public class GladeFeature extends Feature<NoneFeatureConfiguration> {
             }
         }
 
-        spawnHerd(level, random, origin, radius);
+        spawnHerd(level, random, surface, radius);
         return true;
+    }
+
+    /**
+     * Czy ten blok nadaje sie na runo glady. Celowo szeroko: mech, podzol i ziemia
+     * to wlasnie te podloza, na ktorych jednorozce maja sens. W piasku albo na
+     * skale plama wygladalaby jak blad generacji, wiec wole jej nie stawiac.
+     */
+    private static boolean isGladeGround(final BlockState state) {
+        return state.is(Blocks.GRASS_BLOCK) || state.is(Blocks.DIRT) || state.is(Blocks.COARSE_DIRT)
+                || state.is(Blocks.PODZOL) || state.is(Blocks.MOSS_BLOCK);
+    }
+
+    /**
+     * Pierwszy blok ziemi w kolumnie, od punktu placementu w dol (patrz uwaga o
+     * heightmap wyzej). Null = nie ma na czym postawic glady.
+     */
+    private static @Nullable BlockPos findGround(final WorldGenLevel level, final BlockPos from) {
+        for (int dy = 0; dy >= -8; dy--) {
+            final BlockPos pos = new BlockPos(from.getX(), from.getY() + dy, from.getZ());
+            if (isGladeGround(level.getBlockState(pos))) {
+                return pos;
+            }
+        }
+        return null;
     }
 
     /**

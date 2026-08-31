@@ -98,6 +98,7 @@
   "wandzz.gate.no_destination": "The other side is unreachable; the ember went cold again.",
   "wandzz.gate.no_ember": "No Arcane Ember in reach - the spell lights a block, not the sky.",
   "wandzz.gate.opened": "The gate opens in Arkanum.",
+  "wandzz.gesture.ambiguous": "Gesture too ambiguous - draw it larger and more distinctly",
   "wandzz.gesture.too_short": "Draw a longer stroke with the right mouse button.",
   "wandzz.gesture.unknown": "Gesture not recognized.",
   "wandzz.gui.table.clear": "Empty",

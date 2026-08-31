@@ -21,15 +21,15 @@ public final class Spells {
         SpellRegistry.register(new TorchSpell(), GestureTemplates.torchStroke());
 
         // Flame Core (lvl 2) - przykladowe zaklecie z diagramu w dokumencie
-        SpellRegistry.register(new FireballSpell(), GestureTemplates.triangle());
+        SpellRegistry.register(new FireballSpell(), GestureTemplates.burst());
 
         // Dragon Breath Core (lvl 3, ale dostepne dla kazdego core'a lvl 3+)
-        SpellRegistry.register(new TeleportSpell(), GestureTemplates.zigzag());
-        SpellRegistry.register(new BombSpell(), GestureTemplates.letterX());
-        SpellRegistry.register(new DragonBreathSpell(), GestureTemplates.dragonSpiral(48));
+        SpellRegistry.register(new TeleportSpell(), GestureTemplates.twinSquares());
+        SpellRegistry.register(new BombSpell(), GestureTemplates.diamondTick());
+        SpellRegistry.register(new DragonBreathSpell(), GestureTemplates.breathWave());
 
         // Arcane / lvl 3 - nie atak, tylko "przejscie": zapala Arkanny Zar.
-        SpellRegistry.register(new OpenGateSpell(), GestureTemplates.gateStroke());
+        SpellRegistry.register(new OpenGateSpell(), GestureTemplates.archStroke());
 
         // Rdzen echa (lvl 2, z Wardena) + skok: tanie, przydatne, widoczne.
         // Oba sa w podreczniku gestow automatycznie - lista jest budowana z

@@ -44,7 +44,11 @@ public class ChronosAltarFeature extends Feature<NoneFeatureConfiguration> {
     public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
         final WorldGenLevel level = context.level();
         final RandomSource random = context.random();
-        final BlockPos origin = context.origin();
+        // placement "heightmap" daje pierwsze powietrze nad powierzchnia, a nie
+        // blok tej powierzchni - bez skanu w dol oltarz wisialby blok nad ziemia i
+        // boss ladowalby w sciane zamiast na podeiscie
+        final BlockPos placed = context.origin();
+        final BlockPos origin = findPadGround(level, placed);
 
         // podest
         for (int dx = -PAD; dx <= PAD; dx++) {
@@ -82,6 +86,17 @@ public class ChronosAltarFeature extends Feature<NoneFeatureConfiguration> {
             }
         }
         return spawnBoss(level, random, free);
+    }
+
+    /** Dol w dol az do litego bloku, maks. 12 - tam kladziemy podest. */
+    private static BlockPos findPadGround(final WorldGenLevel level, final BlockPos from) {
+        for (int dy = 0; dy >= -12; dy--) {
+            final BlockPos pos = new BlockPos(from.getX(), from.getY() + dy, from.getZ());
+            if (!level.getBlockState(pos).isAir()) {
+                return pos;
+            }
+        }
+        return from;
     }
 
     /**

@@ -60,4 +60,36 @@ public final class SpellRegistry {
         return RECOGNIZER.recognize(drawnPoints)
                 .flatMap(result -> get(result.templateId()));
     }
+
+    /** Jak wyzej, ale tylko wsrod czarow, ktore dany koszyk core'ow udostepnia. */
+    public static Optional<Spell> recognize(List<Point> drawnPoints, java.util.Collection<String> allowedIds) {
+        java.util.Set<String> allowed = new java.util.HashSet<>(allowedIds);
+        return RECOGNIZER.recognize(drawnPoints, allowed::contains)
+                .flatMap(result -> get(result.templateId()));
+    }
+
+    /** Najblizszy wzorzec w danym koszyku, bez progu - do komunikatu zwrotnego. */
+    public static Optional<DollarOneRecognizer.Result> bestMatch(List<Point> drawnPoints,
+            java.util.Collection<String> allowedIds) {
+        java.util.Set<String> allowed = new java.util.HashSet<>(allowedIds);
+        return RECOGNIZER.bestMatch(drawnPoints, allowed::contains);
+    }
+
+    /**
+     * Ktore czary da sie rzucic rdzeniami z listy. To jest TEN SAM warunek co po
+     * stronie serwera ({@code Spell#isProvidedBy}), wiec klient nie zgaduje -
+     * odfiltrowuje dokladnie to, za co serwer i tak by zaplacil.
+     */
+    public static java.util.Collection<String> castableBy(java.util.Collection<com.wandzz.core.CoreType> cores) {
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        for (Spell spell : SPELLS.values()) {
+            for (com.wandzz.core.CoreType core : cores) {
+                if (spell.isProvidedBy(core)) {
+                    ids.add(spell.id());
+                    break;
+                }
+            }
+        }
+        return ids;
+    }
 }

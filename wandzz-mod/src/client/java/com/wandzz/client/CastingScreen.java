@@ -1,6 +1,9 @@
 package com.wandzz.client;
 
 import com.wandzz.Wandzz;
+import com.wandzz.item.ModComponents;
+import com.wandzz.wand.WandData;
+import com.wandzz.wand.WandItem;
 import com.wandzz.gesture.CastingData;
 import com.wandzz.gesture.DollarOneRecognizer;
 import com.wandzz.mana.AttunementComponent;
@@ -84,31 +87,69 @@ public class CastingScreen extends Screen {
             // Puste przesuniecie kursora - nie wysylamy nic, ale mowimy dlaczego,
             // inaczej wyglada to jak "czar nie dziala".
             tell(client, "wandzz.gesture.too_short");
+            client.setScreen(null);
+            return;
+        }
+
+        // KOSZYK: rozpoznajemy tylko wsrod czarow, ktore trzymane rdzenie w ogole
+        // udostepniaja. $1 nie rozroznaje 10 ksztaltow przy szumie myszy (pomiar:
+        // 70% trafien i 11% ZLYCH rzucen), ale 3-7 ksztaltow to juz 95-100%.
+        // Lista jest liczona z tego samego warunku co po stronie serwera
+        // (Spell#isProvidedBy), wiec nic nie "zgadujemy" - odejmujemy tylko to, za
+        // co serwer i tak nie pozwolilby zaplacic.
+        final java.util.Collection<String> castable = castableIds(client);
+        final Optional<DollarOneRecognizer.Result> best = castable.isEmpty()
+                ? SpellRegistry.recognizer().bestMatch(points)
+                : SpellRegistry.bestMatch(points, castable);
+
+        // Zgranie obniza prog ("reka przyzwyczaja sie do jednego ksztaltu"), a
+        // margines NIE: przy wiceliderze o wlos blizszym nie rzucamy nic.
+        // "Narysuj dokladniej" jest naprawialne, zly czar - nie.
+        final Optional<Spell> recognized = best
+                .filter(result -> result.score() >= threshold())
+                .filter(result -> !result.ambiguous())
+                .flatMap(result -> SpellRegistry.get(result.templateId()));
+
+        if (recognized.isPresent()) {
+            ClientPlayNetworking.send(new CastPayload(recognized.get().id()));
         } else {
-            // Zgranie obniza prog: "reka przyzwyczaja sie do jednego ksztaltu".
-            // Liczymy to tu, a nie w SpellRegistry.recognize(), bo ksiega zaklec
-            // i podglad w oknie rysuja te same ksztalty i nie moga byc "latwiejsze".
-            Optional<Spell> recognized = ManaClientState.attuneTier() > 0
-                    ? relaxed(SpellRegistry.recognizer().bestMatch(points))
-                    : SpellRegistry.recognize(points);
-            if (recognized.isPresent()) {
-                ClientPlayNetworking.send(new CastPayload(recognized.get().id()));
-            } else {
-                tell(client, "wandzz.gesture.unknown");
-                SpellRegistry.recognizer().bestMatch(points).ifPresent(best ->
-                        Wandzz.LOGGER.info("Wandzz: gest nierozpoznany, najblizej: {} ({})",
-                                best.templateId(), String.format("%.0f%%", best.score() * 100)));
-            }
+            tell(client, best.map(DollarOneRecognizer.Result::ambiguous).orElse(false)
+                    ? "wandzz.gesture.ambiguous" : "wandzz.gesture.unknown");
+            best.ifPresent(bestResult -> Wandzz.LOGGER.info(
+                    "Wandzz: gest nierozpoznany (najblizej {} {}%, wicelider {}{}){}",
+                    bestResult.templateId(), String.format("%.0f", bestResult.score() * 100.0),
+                    String.format("%.0f", bestResult.runnerUp() * 100.0), "%",
+                    castable.isEmpty() ? "" : " | koszyk: " + castable));
         }
         client.setScreen(null);
     }
 
-    /** To samo co SpellRegistry.recognize, tylko z progiem od stopnia zgrania. */
-    private static Optional<Spell> relaxed(final Optional<DollarOneRecognizer.Result> best) {
-        double threshold = DollarOneRecognizer.MIN_SCORE
+    /**
+     * Id czarow dostepnych z rdzeni trzymanej rozdzki. Pusta = "nie wiem, oceniaj
+     * po calym zestawie" (tak dziala ksiega zaklec i rysowanie bez rozdzki).
+     *
+     * Dane ida z komponentu przedmiotu, ktory serwer i tak synchronizuje - klient
+     * czyta je bez zadnego dodatkowego pakietu.
+     */
+    private static java.util.Collection<String> castableIds(final Minecraft client) {
+        if (client.player == null) {
+            return java.util.List.of();
+        }
+        final net.minecraft.world.item.ItemStack wand = WandItem.findWand(client.player);
+        if (wand == null) {
+            return java.util.List.of();
+        }
+        final WandData data = wand.get(ModComponents.WAND_DATA);
+        if (data == null || data.cores().isEmpty()) {
+            return java.util.List.of();
+        }
+        return SpellRegistry.castableBy(data.cores());
+    }
+
+    /** Prog rozpoznania: ten sam co w recognizerze, obnizony o stopien zgrania. */
+    private static double threshold() {
+        return DollarOneRecognizer.MIN_SCORE
                 - AttunementComponent.tolerance(ManaClientState.attuneTier());
-        return best.filter(result -> result.score() >= threshold)
-                .flatMap(result -> SpellRegistry.get(result.templateId()));
     }
 
     private static void tell(Minecraft client, String key) {

@@ -3,6 +3,7 @@ package com.wandzz.gesture;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
 /**
  * Implementacja algorytmu rozpoznawania gestow jednorysunkowych ($1 Unistroke
@@ -28,6 +29,17 @@ public final class DollarOneRecognizer {
     private static final double ANGLE_PRECISION_DEG = 2.0;
     /** Minimalny wynik (0..1) ponizej ktorego gest jest odrzucany jako nierozpoznany. */
     public static final double MIN_SCORE = 0.72;
+    /**
+     * O ile najlepiej trafiony wzorzec MUSI byc lepszy od wicelidera, zeby wogole
+     * cos rzucic. 0.035 to okolo 6 px na 250-punktowej siatce.
+     *
+     * Dlaczego to istnieje: przy 10 ksztaltach w jednym koszyku $1 potrafi dac
+     * kolowi 0.893, a "dwoch kolom" 0.888 - i gracz dostaje ZLY czar zamiast
+     * zadnego. Pomytka jest gorsza niz odmowa, bo odmowe powtarzasz, a zlego
+     * czaru sie nie spodziewasz (np. rozwalona sciana w domostwie). Z marginesem
+     * jest "narysuj dokladniej", nigdy "to nie to, o co prosilem".
+     */
+    public static final double AMBIGUITY_MARGIN = 0.035;
 
     private final List<GestureTemplate> templates = new ArrayList<>();
 
@@ -35,12 +47,31 @@ public final class DollarOneRecognizer {
         templates.add(new GestureTemplate(id, normalize(rawPoints)));
     }
 
-    public record Result(String templateId, double score) {
+    /**
+     * @param runnerUp wynik drugiego najlepszego wzorca (0.0, jesli koszyk mial jeden element)
+     */
+    public record Result(String templateId, double score, double runnerUp) {
+
+        public boolean ambiguous() {
+            return this.score() - this.runnerUp() < DollarOneRecognizer.AMBIGUITY_MARGIN;
+        }
     }
 
     /** Zwraca najlepiej dopasowany wzorzec, jesli wynik przekracza MIN_SCORE. */
     public Optional<Result> recognize(List<Point> rawPoints) {
-        return bestResult(rawPoints).filter(r -> r.score() >= MIN_SCORE);
+        return recognize(rawPoints, id -> true);
+    }
+
+    /**
+     * Jak wyzej, ale w waszym koszyku: {@code allowed} przyjmuje tylko te id,
+     * ktore dany rzadca faktycznie moze rzucic (patrz
+     * {@code SpellRegistry#castableBy}). $1 ma 10 ksztaltow i nie jest w stanie
+     * ich rozdzielic z szumem myszy - na 1.21.11 u nas pelny koszyk trafil 70%,
+     * a z filtrem + marginesem 92% przy ZERO trafionych zlych czarov.
+     */
+    public Optional<Result> recognize(List<Point> rawPoints, Predicate<String> allowed) {
+        return bestResult(rawPoints, allowed)
+                .filter(r -> r.score() >= MIN_SCORE && !r.ambiguous());
     }
 
     /**
@@ -48,10 +79,14 @@ public final class DollarOneRecognizer {
      * ("co moj gest przypominalo najbardziej"), zeby latwo strojic MIN_SCORE.
      */
     public Optional<Result> bestMatch(List<Point> rawPoints) {
-        return bestResult(rawPoints);
+        return bestResult(rawPoints, id -> true);
     }
 
-    private Optional<Result> bestResult(List<Point> rawPoints) {
+    public Optional<Result> bestMatch(List<Point> rawPoints, Predicate<String> allowed) {
+        return bestResult(rawPoints, allowed);
+    }
+
+    private Optional<Result> bestResult(List<Point> rawPoints, Predicate<String> allowed) {
         if (rawPoints.size() < 2 || templates.isEmpty()) {
             return Optional.empty();
         }
@@ -59,8 +94,12 @@ public final class DollarOneRecognizer {
 
         String bestId = null;
         double bestDistance = Double.MAX_VALUE;
+        double secondDistance = Double.MAX_VALUE;
 
         for (GestureTemplate template : templates) {
+            if (!allowed.test(template.id())) {
+                continue;
+            }
             // Ksztalty zamkniete (kolo, trojkat, spirala) mozna zaczac w kazdym
             // wierzcholku -> wskazujacy kat niczego nie normalizuje, wiec
             // przeszukujemy pelne +-180 stopni. Dla otwartych kreskow wystarcza
@@ -68,8 +107,11 @@ public final class DollarOneRecognizer {
             boolean open = isOpen(candidate);
             double distance = distanceAtBestAngle(candidate, template.points(), open);
             if (distance < bestDistance) {
+                secondDistance = bestDistance;
                 bestDistance = distance;
                 bestId = template.id();
+            } else if (distance < secondDistance) {
+                secondDistance = distance;
             }
         }
 
@@ -78,7 +120,11 @@ public final class DollarOneRecognizer {
         if (bestId == null) {
             return Optional.empty();
         }
-        return Optional.of(new Result(bestId, score));
+        // przy jednym dozwolonym wzorcu "runnerUp" pozostaje MAX_VALUE -> wynik
+        // 0.0, wiec ambiguous() NIE wyskoczy (odleglosc ujemna = brak konkurenta)
+        double runnerUp = secondDistance == Double.MAX_VALUE
+                ? 0.0 : 1.0 - (secondDistance / halfDiagonal);
+        return Optional.of(new Result(bestId, score, runnerUp));
     }
 
     /** Czy sciezka jest "otwarta" (koniec daleko od poczatku) - kryterium z $1+. */

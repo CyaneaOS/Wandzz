@@ -98,6 +98,7 @@
   "wandzz.gate.no_destination": "Druga strona jest nieosiagalna; zar znow wystygł.",
   "wandzz.gate.no_ember": "Brak Arkannego Zaru w zasiegu - to zaklecie zapala blok, nie powietrze.",
   "wandzz.gate.opened": "Brama otworzyla sie w Arkanum.",
+  "wandzz.gesture.ambiguous": "Gest za bardzo niejednoznaczny - narysuj go wiekszy i wyrazniejszy",
   "wandzz.gesture.too_short": "Narysuj dłuższy gest — przytrzymaj PPM z różdżką w ręce.",
   "wandzz.gesture.unknown": "Gest nierozpoznany.",
   "wandzz.gui.table.clear": "Zwolnij",
