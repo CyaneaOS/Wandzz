@@ -7,6 +7,7 @@ import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
@@ -95,7 +96,12 @@ public final class WandzzHud {
         int freeLeft = leftEdge;
 
         int thickness = width >= 470 ? 8 : 6;
-        Component label = Component.translatable("wandzz.mana.bar",
+        // MutableComponent, nie Component: `append(...)` mieszka na MUTABLE i nie
+        // ma go na interfejsie, wiec deklarcjac `Component label` tracimy te linie
+        // (do tego rzuca "cannot find symbol" zamiast cichego braku doklejenia).
+        // Obie sciezki renderowania i tak potrzebuja tylko `Component` - to sam
+        // typ, w ktory MutableComponent sie wciela.
+        MutableComponent label = Component.translatable("wandzz.mana.bar",
                 (int) Math.round(shown), (int) Math.round(max));
         // Zgranie doklejam do TEJ samej etykiety: oba warianty ukladu (slupek przy
         // hotbarze i pasek nad sercami) rysuja jedna etykieta, wiec nie ma drugiej
