@@ -77,6 +77,7 @@
   "wandzz.gate.arrived": "Jestes teraz w: %s",
   "wandzz.gate.broken": "Ten zar zgubil polaczenie z druga strona. Odpal go ponownie zakleciem.",
   "wandzz.gate.escape": "Otwarte awaryjne wyjscie - prowadzi na powierzchnie.",
+  "wandzz.gate.hint": "Zimny żar - kliknij go PPM mając w ręku różdżkę i rzuć zaklęcie Otwarcie bramy, żeby go zapalić.",
   "wandzz.gate.lit": "Ten zar juz sie pali - kliknij go prawym, aby przejsc.",
   "wandzz.gate.missing": "Wymiar %s nie jest zaladowany na tym serwerze.",
   "wandzz.gate.need_aim": "Patrz w Arkanny Zar, zeby otworzyc brame.",

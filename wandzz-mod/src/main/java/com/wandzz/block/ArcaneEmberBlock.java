@@ -1,8 +1,10 @@
 package com.wandzz.block;
 
+import com.wandzz.core.WandCoreItem;
 import com.wandzz.world.GateService;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
@@ -54,6 +56,29 @@ public class ArcaneEmberBlock extends Block {
      * przedmiotem). PPM z przedmiotem w rece schodzi wiec normalnie - np. mozna
      * postawic blok na zarze, o ile to nie on jest celem "uzyj".
      */
+    /**
+     * 1.21.11: {@code Block#use} z ItemStackiem zostalo zastapione przez
+     * {@code useWithoutItem} (osobna sciezka {@code useItemOn} dla interakcji
+     * przedmiotem).
+     *
+     * KOLEJNOSC klikniecia jest tu cala gra, wiec dokumentuje ja wprost. Vanilla
+     * w {@code Minecraft#startUseItem} pyta BLOK zanim da klikniecie przedmiotowi:
+     *   MultiPlayerGameMode#useItemOn
+     *     -> BlockState#useItemOn (domyslnie TRY_WITH_EMPTY_HAND - patrz BlockBehaviour)
+     *     -> BlockState#useWithoutItem (tylko MAIN_HAND i tylko gdy brak sneak+item)
+     *     -> jesli wynik to Success (SUCCESS albo CONSUME) startUseItem robi
+     *        "return" i gameMode#useItem NIE zostaje wywolane.
+     * A to wlasnie useItem odpala UseItemCallback, ktory u nas otwiera CastingScreen
+     * (ekran gestu). Dawniej ta metoda zawsze zwrala SUCCESS, wiec kazdy PPM z
+     * rozdzka w rece, gdy celownik stal na zarze, kasowal rzucanie czaru - a to
+     * jedyny sposob, zeby zar w ogole zapalil. Stad ponizsze priorytety:
+     *
+     *   sneak                         -> PASS  (chce cos postawic albo wyjac rdzen)
+     *   rdzen w ktorejkolwiek rece    -> PASS  (PPM rdzenia = zwrot rdzenia, WandInteractions)
+     *   lit=true                      -> nasza brama: travel + SUCCESS
+     *   lit=false, obie rece puste    -> podpowiedz w action barze (nic wiecej nie ma co robic)
+     *   lit=false, cos w rece         -> PASS  (klik dostaje przedmiot = rozdzka = czar)
+     */
     @Override
     protected InteractionResult useWithoutItem(final BlockState state, final Level level, final BlockPos pos,
             final Player player, final BlockHitResult hitResult) {
@@ -61,10 +86,33 @@ public class ArcaneEmberBlock extends Block {
         if (player.isSecondaryUseActive()) {
             return InteractionResult.PASS;
         }
-        if (!level.isClientSide() && state.getValue(LIT) && player instanceof ServerPlayer serverPlayer) {
+        if (holdsCore(player)) {
+            return InteractionResult.PASS;
+        }
+
+        if (!state.getValue(LIT)) {
+            boolean emptyHands = player.getMainHandItem().isEmpty() && player.getOffhandItem().isEmpty();
+            if (!emptyHands) {
+                return InteractionResult.PASS;
+            }
+            if (!level.isClientSide()) {
+                player.displayClientMessage(Component.translatable("wandzz.gate.hint"), true);
+            }
+            return InteractionResult.SUCCESS;
+        }
+
+        if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
             GateService.travel((ServerLevel) level, pos, serverPlayer);
         }
+        // SUCCESS po obu stronach - inaczej klient predykcyjnie sprobowalby
+        // postawic blok na zarze i dostalby rollback (miganie ekwipunku).
         return InteractionResult.SUCCESS;
+    }
+
+    /** Czy w ktorejkolwiek rece jest rdzen - to on jest wlascicielem PPM (patrz wyzej). */
+    private static boolean holdsCore(final Player player) {
+        return player.getMainHandItem().getItem() instanceof WandCoreItem
+                || player.getOffhandItem().getItem() instanceof WandCoreItem;
     }
 
     /** Iskry nad otwarta brama - zeby byla widoczna z daleka w jaskini. */

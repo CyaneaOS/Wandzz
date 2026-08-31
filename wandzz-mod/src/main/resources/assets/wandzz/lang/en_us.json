@@ -77,6 +77,7 @@
   "wandzz.gate.arrived": "Arrived in %s",
   "wandzz.gate.broken": "This ember lost its pair. Light it again with the gate spell.",
   "wandzz.gate.escape": "Emergency exit opened - it leads to the surface.",
+  "wandzz.gate.hint": "Cold ember - right-click it with a wand in hand and cast Open Gate to light it.",
   "wandzz.gate.lit": "This ember already burns - right-click it to step through.",
   "wandzz.gate.missing": "Dimension %s is not loaded on this server.",
   "wandzz.gate.need_aim": "Look at an Arcane Ember to open a gate.",
