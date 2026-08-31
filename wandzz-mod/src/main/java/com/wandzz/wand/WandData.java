@@ -19,9 +19,10 @@ import java.util.List;
  * zmiane komponentu, a stary format zapisu ({@code {"material":..,"cores":[..]}})
  * nadal sie deserializuje - {@code RecordCodecBuilder} ignoruje dodatkowe klucze.
  *
- * Dodatkowy {@link #STREAM_CODEC} jest niezbedny, bo tooltipy i ekran stolika
- * czytaja sklada PO STRONIE KLIENTA - bez `networkSynchronized` komponent zostalby
- * na synchronizacje wyciety i klient widzialby pusta rozdzke.
+ * Wlasny {@link #STREAM_CODEC} (zamiast kodeku wyrabianego przez builder z
+ * {@code CODEC}) to swiadoma decyzja: klient musi widziec sklada (tooltipy, okno
+ * stolika), a jawny kodek binarny jest tanszy niz JSON przez
+ * {@code fromCodecWithRegistries} i nie zalezy od {@code RegistryFriendlyByteBuf}.
  */
 public record WandData(List<CoreType> cores) {
 

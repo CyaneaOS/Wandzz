@@ -11,6 +11,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.world.level.block.TintedParticleLeavesBlock;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.MapColor;
@@ -44,9 +45,11 @@ public final class ModBlocks {
         ARCANE_PLANKS = register("arcane_planks",
                 props -> new Block(props.strength(2.0f, 3.0f)));
 
-        // Liscie: wzor na vanilla leavesProperties(...) (PLANT, 0.2, random tick
-        // dla gnicia, noOcclusion + wyjete predykaty "litych" blokow).
-        ARCANE_LEAVES = register("arcane_leaves", props -> new LeavesBlock(0.02f, props
+        // Liscie: 1.21.11 ma abstract LeavesBlock, vanilla buduje swoje przez
+        // TintedParticleLeavesBlock (szansa na opadajaca czasteczke + tint lisci).
+        // Wzor na vanilla leavesProperties(...): PLANT, 0.2, randomTicks (gnicie),
+        // noOcclusion + wyjete predykaty "litych" blokow.
+        ARCANE_LEAVES = register("arcane_leaves", props -> new TintedParticleLeavesBlock(0.02f, props
                 .mapColor(MapColor.PLANT)
                 .strength(0.2f)
                 .randomTicks()

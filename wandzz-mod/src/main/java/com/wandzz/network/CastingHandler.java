@@ -118,7 +118,9 @@ public final class CastingHandler {
         player.setAttached(ManaAttachments.MANA, updated);
 
         boolean full = updated.current() >= updated.max();
-        if (full || player.level().getGameTime() % MANA_SYNC_PERIOD == 0L) {
+        // `tickCount` (pole z Entity) - swiadomie NIE `level().getGameTime()`, bo
+        // ta metoda lezy na ServerLevel/ClientLevel, a nie na Level.
+        if (full || player.tickCount % MANA_SYNC_PERIOD == 0) {
             WandzzNetwork.syncMana(player);
         }
     }

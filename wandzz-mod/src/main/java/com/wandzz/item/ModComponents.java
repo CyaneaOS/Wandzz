@@ -16,9 +16,13 @@ import java.util.function.UnaryOperator;
 public final class ModComponents {
 
     /**
-     * {@code networkSynchronized} jest tu OBOWIAZKOWE: bez niego komponent jest
-     * serwerowy, a wiec zarowno tooltip rozdzki, jak i okno stolika widzialyby
-     * pusta liste rdzeni (client dostalby stack bez tej wartosci).
+     * Tooltip rozdzki i okno stolika czytaja sklada PO STRONIE KLIENTA, wiec
+     * komponent musi miec kodek sieciowy. {@code DataComponentType.Builder#build()}
+     * wprawdzie wyrabia go sam z {@code CODEC} (przez
+     * {@code ByteBufCodecs.fromCodecWithRegistries}), ale to kodek "leniwy":
+     * wymaga {@code RegistryFriendlyByteBuf} i koduje przez JSON w kazda strone.
+     * Wlasny {@code STREAM_CODEC} jest jawny, tanszy (VarInt + UTF) i dziala na
+     * zwyklym {@code FriendlyByteBuf} - stad jest tu wpisany wprost.
      */
     public static final DataComponentType<WandData> WAND_DATA = register(
             "wand_data",
