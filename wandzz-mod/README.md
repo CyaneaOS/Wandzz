@@ -105,6 +105,7 @@ dopasowane:
 | gest `strike` = pozioma kreska | $1 jest odporny na obrót, więc „kreska" i „kreska z hakiem" (torch) to po normalizacji ten sam kształt – czary myliły się między sobą. `strike` to teraz czkawka (V) |
 | cast odrzucany po cichu (`return` bez komunikatu) | każdy przypadek odmowy (brak różdżki / brak rdzenia / za mało many / nierozpoznany gest) dostaje teraz action bar; poza tym testowany zbiór wzorców daje 100% trafień przy szumie 6 px i obrocie ±63° |
 | `build.gradle` bez `publishing`/`jar`/`encoding` | uzupełnione wg oficjalnego template'u + `options.encoding = "UTF-8"` |
+| `ResourceKey#location()` nie istnieje | po rename’cie `ResourceLocation` → `Identifier` accessor `ResourceKey` nazywa się `identifier()` (stad `cannot find symbol: method location()` na `ResourceKey<Level>` w `GateService`) |
 | `LeavesBlock is abstract; cannot be instantiated` | w 1.21.11 `LeavesBlock` jest abstract (ma `public abstract MapCodec codec()`); liście buduje się przez `TintedParticleLeavesBlock(float leafParticleChance, Properties)` (jak `oak_leaves`) albo `UntintedParticleLeavesBlock(chance, ParticleOptions, Properties)` |
 | `player.level().getGameTime()` | `getGameTime()` leży na `ServerLevel`/`ClientLevel`, **nie** na `Level` → throttling synchronizacji many liczy się od `player.tickCount` (publiczne pole `Entity`, vanilla: `this.tickCount % 20 == 0`) |
 | pasek many nachodził na slot offhandu i uciekał z ekranu | geometria liczona ze stałych vanilli + wybór strony + wariant poziomy (sekcja „HUD many“) |

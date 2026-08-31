@@ -195,7 +195,7 @@ public final class GateService {
         MinecraftServer server = level.getServer();
         ServerLevel dest = server == null ? null : server.getLevel(other.dimension());
         if (dest == null) {
-            tell(player, "wandzz.gate.missing", other.dimension().location().toString());
+            tell(player, "wandzz.gate.missing", other.dimension().identifier().toString());
             return;
         }
 
@@ -220,7 +220,7 @@ public final class GateService {
         dest.playSound(null, standing, SoundEvents.PORTAL_TRIGGER, SoundSource.PLAYERS, 0.6f, 1.1f);
 
         if (arrived instanceof ServerPlayer sp) {
-            tell(sp, "wandzz.gate.arrived", prettyLevel(dest.dimension().location()));
+            tell(sp, "wandzz.gate.arrived", prettyLevel(dest.dimension().identifier()));
         }
     }
 
@@ -298,6 +298,10 @@ public final class GateService {
         return ModWorldgen.ARKANUM_LEVEL.equals(level.dimension());
     }
 
+    /**
+     * ResourceKey NIE ma location() - po rename'ie ResourceLocation ->
+     * Identifier (1.21.11) accessor nosi nazwe {@code identifier()}.
+     */
     private static String prettyLevel(final Identifier id) {
         return id.getNamespace() + ":" + id.getPath();
     }
