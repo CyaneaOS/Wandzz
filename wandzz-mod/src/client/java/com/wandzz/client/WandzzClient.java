@@ -69,7 +69,8 @@ public class WandzzClient implements ClientModInitializer {
 
         // Serwer powiedzial, jaka jest mana -> HUD ma co rysowac.
         ClientPlayNetworking.registerGlobalReceiver(ManaSyncPayload.ID,
-                (payload, context) -> ManaClientState.update(payload.current(), payload.max()));
+                (payload, context) -> ManaClientState.update(payload.current(), payload.max(),
+                        payload.attuneTier(), payload.attuneSpell()));
 
         // PPM na stoliku: to serwer decyduje i wysyla pakiet S2C -> otwieramy okno.
         ClientPlayNetworking.registerGlobalReceiver(OpenTablePayload.ID,

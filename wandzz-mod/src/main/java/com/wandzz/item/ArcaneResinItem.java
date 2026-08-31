@@ -30,5 +30,6 @@ public class ArcaneResinItem extends Item {
 
         tooltip.accept(Component.translatable("wandzz.resin.tooltip"));
         tooltip.accept(Component.translatable("wandzz.resin.source"));
+        tooltip.accept(Component.translatable("wandzz.attune.desc"));
     }
 }

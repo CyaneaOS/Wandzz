@@ -2,6 +2,8 @@ package com.wandzz.client;
 
 import com.wandzz.Wandzz;
 import com.wandzz.gesture.CastingData;
+import com.wandzz.gesture.DollarOneRecognizer;
+import com.wandzz.mana.AttunementComponent;
 import com.wandzz.gesture.Point;
 import com.wandzz.network.CastPayload;
 import com.wandzz.spell.Spell;
@@ -83,7 +85,12 @@ public class CastingScreen extends Screen {
             // inaczej wyglada to jak "czar nie dziala".
             tell(client, "wandzz.gesture.too_short");
         } else {
-            Optional<Spell> recognized = SpellRegistry.recognize(points);
+            // Zgranie obniza prog: "reka przyzwyczaja sie do jednego ksztaltu".
+            // Liczymy to tu, a nie w SpellRegistry.recognize(), bo ksiega zaklec
+            // i podglad w oknie rysuja te same ksztalty i nie moga byc "latwiejsze".
+            Optional<Spell> recognized = ManaClientState.attuneTier() > 0
+                    ? relaxed(SpellRegistry.recognizer().bestMatch(points))
+                    : SpellRegistry.recognize(points);
             if (recognized.isPresent()) {
                 ClientPlayNetworking.send(new CastPayload(recognized.get().id()));
             } else {
@@ -94,6 +101,14 @@ public class CastingScreen extends Screen {
             }
         }
         client.setScreen(null);
+    }
+
+    /** To samo co SpellRegistry.recognize, tylko z progiem od stopnia zgrania. */
+    private static Optional<Spell> relaxed(final Optional<DollarOneRecognizer.Result> best) {
+        double threshold = DollarOneRecognizer.MIN_SCORE
+                - AttunementComponent.tolerance(ManaClientState.attuneTier());
+        return best.filter(result -> result.score() >= threshold)
+                .flatMap(result -> SpellRegistry.get(result.templateId()));
     }
 
     private static void tell(Minecraft client, String key) {

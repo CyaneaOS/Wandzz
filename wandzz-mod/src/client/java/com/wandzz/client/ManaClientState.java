@@ -1,5 +1,7 @@
 package com.wandzz.client;
 
+import com.wandzz.mana.AttunementComponent;
+
 /**
  * Klientowy lustrzany stan many - jedyny source prawdy dla HUD-a.
  *
@@ -14,11 +16,15 @@ public final class ManaClientState {
     private static double target = -1.0;
     private static double shown = -1.0;
     private static double max = 1.0;
+    private static int attuneTier;
+    private static String attuneSpell = "";
 
     private ManaClientState() {
     }
 
-    public static void update(double current, double maxMana) {
+    public static void update(double current, double maxMana, int tier, String spell) {
+        attuneTier = Math.max(0, Math.min(AttunementComponent.MAX_TIER, tier));
+        attuneSpell = spell == null ? "" : spell;
         max = Math.max(1.0, maxMana);
         target = Math.max(0.0, Math.min(current, max));
         // Pierwszy pakiet (albo powrot z innego wymiaru): skocz od razu, zeby
@@ -28,7 +34,19 @@ public final class ManaClientState {
         }
     }
 
+    /** Poziom zgrania - klient liczy z niego obnizony prog gestu. */
+    public static int attuneTier() {
+        return attuneTier;
+    }
+
+    /** Id zaklecia, na ktore jest rozped (puste = brak). */
+    public static String attuneSpell() {
+        return attuneSpell;
+    }
+
     public static void reset() {
+        attuneTier = 0;
+        attuneSpell = "";
         target = -1.0;
         shown = -1.0;
         max = 1.0;

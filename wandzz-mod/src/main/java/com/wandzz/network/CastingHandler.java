@@ -1,6 +1,7 @@
 package com.wandzz.network;
 
 import com.wandzz.core.CoreType;
+import com.wandzz.mana.AttunementComponent;
 import com.wandzz.mana.ManaAttachments;
 import com.wandzz.mana.ManaComponent;
 import com.wandzz.spell.Spell;
@@ -10,6 +11,8 @@ import com.wandzz.wand.WandItem;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -83,18 +86,34 @@ public final class CastingHandler {
             return;
         }
 
+        // Zgranie (patrz AttunementComponent): rabat liczony PRZED proba platnosci,
+        // bo komunikat "za malo many" ma mowic tyle, ile faktycznie trzeba.
+        AttunementComponent attune = player.getAttachedOrCreate(ManaAttachments.ATTUNEMENT);
+        int tier = attune.tier(spellId);
+        double cost = spell.manaCost() * AttunementComponent.costMultiplier(tier);
+
         ManaComponent mana = player.getAttachedOrCreate(ManaAttachments.MANA);
-        if (!mana.has(spell.manaCost())) {
+        if (!mana.has(cost)) {
             tell(player, "wandzz.spell.not_enough_mana",
-                    (int) Math.ceil(spell.manaCost()), (int) Math.floor(mana.current()));
+                    (int) Math.ceil(cost), (int) Math.floor(mana.current()));
             return;
         }
 
-        player.setAttached(ManaAttachments.MANA, mana.spend(spell.manaCost()));
+        player.setAttached(ManaAttachments.MANA, mana.spend(cost));
+        AttunementComponent next = attune.afterCast(spellId);
+        player.setAttached(ManaAttachments.ATTUNEMENT, next);
         // HUD many zyje z wlasnego pakietu S2C (attachment gracza nie jest
         // synchronizowane przez vanilla), wiec po wydaniu many wysylamy stan.
         WandzzNetwork.syncMana(player);
         spell.cast(level, player);
+
+        // Wejscie na poziom musi byc slyszalne i widoczne - inaczej progresja
+        // jest statystyka, ktorej nikt nie zauwaza.
+        int nextTier = next.tier(spellId);
+        if (nextTier > tier) {
+            tell(player, "wandzz.attune.up", AttunementComponent.roman(nextTier));
+            player.playSound(SoundEvents.AMETHYST_BLOCK_CHIME, 0.7F, 1.35F + 0.1F * nextTier);
+        }
     }
 
     /**

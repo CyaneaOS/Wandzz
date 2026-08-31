@@ -4,6 +4,7 @@ import com.wandzz.Wandzz;
 import com.wandzz.core.CoreType;
 import com.wandzz.core.WandCoreItem;
 import com.wandzz.item.ModItems;
+import com.wandzz.mana.AttunementComponent;
 import com.wandzz.mana.ManaAttachments;
 import com.wandzz.mana.ManaComponent;
 import com.wandzz.wand.WandData;
@@ -63,7 +64,9 @@ public final class WandzzNetwork {
     /** Wyslij aktualna mana do jednego gracza (client rysuje z tego HUD). */
     public static void syncMana(ServerPlayer player) {
         ManaComponent mana = player.getAttachedOrCreate(ManaAttachments.MANA);
-        ServerPlayNetworking.send(player, new ManaSyncPayload(mana.current(), mana.max()));
+        AttunementComponent attune = player.getAttachedOrCreate(ManaAttachments.ATTUNEMENT);
+        ServerPlayNetworking.send(player, new ManaSyncPayload(mana.current(), mana.max(),
+                attune.tier(), attune.spellId()));
     }
 
     // ------------------------------------------------------------------

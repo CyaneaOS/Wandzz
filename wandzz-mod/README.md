@@ -136,6 +136,33 @@ Uwaga o formacie zapisu: `WandData` nie trzyma już materiału (idzie z przedmio
 a stare `{"material": …, "cores": […]}` nadal się deserializuje, bo
 `RecordCodecBuilder` ignoruje dodatkowe klucze.
 
+## Zgranie (progresja, ktora zmienia czucie w rozdzce)
+
+Nie ma tu leveli, punktow ani menu - jest licznik pod rzad tego samego zaklecia,
+bo to jest jedyna rzecz, ktora sprawi, ze mod "wciąga" zamiast byc ciekawostka
+na pol godziny. Dwie nagrody, obie odczuwalne w tej samej sekundzie:
+
+| pod rzad | koszt many | prog gestu (MIN_SCORE) |
+|---|---|---|
+| 0-2 | x1.00 | 0.72 |
+| 3-5 | x0.85 | 0.70 |
+| 6-8 | x0.70 | 0.68 |
+| 9+  | x0.55 | 0.66 |
+
+- Stan trzyma `AttunementComponent` jako Fabric Data Attachment na graczu (ten
+  sam mechanizm co mana, `persistent`, przezywa relog).
+- Rabat jest liczony NA SERWERZE przed proba platnosci, wiec komunikat „za malo
+  many" podaje kwote, ktora faktycznie jest do zaplacenia.
+- Obnizony prog dziata TYLKO w oknie rzucania (`CastingScreen`), nie w ksiedze
+  zaklec ani w podgladzie - te rysuja ksztalty i nie moga byc „latwiejsze".
+- Zmiana zaklecia zeruje rozbieg: nie ma rozpedu „na wszystko", jest rozped na
+  jedno. To swiadomie jest nieprzyjemne - inaczej optymalna gra byloby trzymanie
+  jednego czaru na zawsze.
+- Wejscie na poziom sygnalizuje dzwiek (`block.amethyst_block.chime`) i action
+  bar, a HUD dokleja ` - zgranie II` do etykiety paska many.
+- Trzecia linia tooltipa `wandzz:arcane_resin` tlumaczy zasade w grze, bez
+  czytania README.
+
 ## Jak to działa w grze
 
 ### Drewno, patyki i różdżki — 13 gatunków

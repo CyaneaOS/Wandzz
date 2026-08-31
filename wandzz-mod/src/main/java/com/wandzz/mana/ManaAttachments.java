@@ -29,8 +29,22 @@ public final class ManaAttachments {
      * ladowaniem danych gracza), dlatego dotykamy pole jawnie - bez tego klasa
      * zostalaby zainicjalizowana dopiero przy pierwszym rzucanym zakleciu.
      */
+    /**
+     * Zgranie (patrz {@link AttunementComponent}). Ten sam mechanizm co mana:
+     * attachment na graczu, {@code persistent}, synchronizowany wlasnym
+     * pakietem przy okazji {@code ManaSyncPayload} - bez drugiego payloadu,
+          bo HUD i tak leci 2x/sekunde.
+     */
+    public static final AttachmentType<AttunementComponent> ATTUNEMENT = AttachmentRegistry.create(
+            Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, "attunement"),
+            builder -> builder
+                    .persistent(AttunementComponent.CODEC)
+                    .initializer(AttunementComponent::none)
+    );
+
     public static void bootstrap() {
         Objects.requireNonNull(MANA, "mana attachment nie zostal zarejestrowany");
+        Objects.requireNonNull(ATTUNEMENT, "attunement attachment nie zostal zarejestrowany");
     }
 
     private ManaAttachments() {

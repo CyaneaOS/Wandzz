@@ -1,6 +1,7 @@
 package com.wandzz.client;
 
 import com.wandzz.Wandzz;
+import com.wandzz.mana.AttunementComponent;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -96,6 +97,14 @@ public final class WandzzHud {
         int thickness = width >= 470 ? 8 : 6;
         Component label = Component.translatable("wandzz.mana.bar",
                 (int) Math.round(shown), (int) Math.round(max));
+        // Zgranie doklejam do TEJ samej etykiety: oba warianty ukladu (slupek przy
+        // hotbarze i pasek nad sercami) rysuja jedna etykieta, wiec nie ma drugiej
+        // pozycji do pilnowania, a labelWidth jest liczony juz po doklejeniu.
+        int attuneTier = ManaClientState.attuneTier();
+        if (attuneTier > 0) {
+            label = label.append(Component.translatable("wandzz.attune.hud",
+                    AttunementComponent.roman(attuneTier)));
+        }
         int labelWidth = client.font.width(label.getVisualOrderText());
 
         if (Math.max(freeRight, freeLeft) >= thickness + MIN_SIDE_SPACE) {

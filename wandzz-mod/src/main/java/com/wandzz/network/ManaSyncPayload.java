@@ -14,7 +14,8 @@ import net.minecraft.resources.Identifier;
  * Podwojne double (nie float): wartosc jest ulamkowa (regen co tick = 0.05), a
  * klient ma ja tylko wygladzic, wiec precyzja "paska" nie gra roli.
  */
-public record ManaSyncPayload(double current, double max) implements CustomPacketPayload {
+public record ManaSyncPayload(double current, double max, int attuneTier, String attuneSpell)
+        implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<ManaSyncPayload> ID =
             new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, "mana_sync"));
@@ -23,8 +24,13 @@ public record ManaSyncPayload(double current, double max) implements CustomPacke
             (buf, payload) -> {
                 buf.writeDouble(payload.current());
                 buf.writeDouble(payload.max());
+                buf.writeVarInt(payload.attuneTier());
+                // writeUtf z limitem: id zaklecia jest krotkie, a bez limitu
+                // zly pakiet = przydzial pamieci pod string wielkosci swiata
+                buf.writeUtf(payload.attuneSpell(), 64);
             },
-            buf -> new ManaSyncPayload(buf.readDouble(), buf.readDouble())
+            buf -> new ManaSyncPayload(buf.readDouble(), buf.readDouble(), buf.readVarInt(),
+                    buf.readUtf(64))
     );
 
     @Override
