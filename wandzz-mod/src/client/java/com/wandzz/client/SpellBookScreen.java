@@ -231,7 +231,9 @@ public class SpellBookScreen extends Screen {
      * drawLine, a fill() 1x1 przy krate 30 px to maksymalnie kilkanascie
      * wywolan - tanie i dokladne.
      */
-    private static void drawLine(final GuiGraphics graphics, int x0, final int y0, int x1, final int y1,
+    // x0/y0 sa MUTOWANE w petli Bresenhama, wiec nie moga byc final (wlasnie to
+    // wywalilo compileClientJava: "final parameter y0 may not be assigned").
+    private static void drawLine(final GuiGraphics graphics, int x0, int y0, int x1, final int y1,
             final int color) {
 
         int dx = Math.abs(x1 - x0);
