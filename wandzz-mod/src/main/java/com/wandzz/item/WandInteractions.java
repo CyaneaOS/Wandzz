@@ -1,6 +1,7 @@
 package com.wandzz.item;
 
 import com.wandzz.core.WandCoreItem;
+import net.minecraft.world.entity.player.Player;
 import com.wandzz.wand.WandItem;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.network.chat.Component;
@@ -35,6 +36,14 @@ public final class WandInteractions {
                 return InteractionResult.PASS;
             }
             ItemStack used = player.getItemInHand(hand);
+
+            // Zywica arkanu w rece: PPM = nasacenie rozdzki (+1 gniazdo, +20%
+            // regenu, brama bez gestu). Przed ponizszym sprawdzeniem, bo zywica
+            // rdzeniem nie jest i "PASS, nie moj klik" dla rdzeni by ja zabil.
+            if (used.getItem() == ModItems.ARCANE_RESIN) {
+                return infuse(player, used) ? InteractionResult.SUCCESS : InteractionResult.PASS;
+            }
+
             if (!(used.getItem() instanceof WandCoreItem coreItem)) {
                 return InteractionResult.PASS;
             }
@@ -60,5 +69,30 @@ public final class WandInteractions {
             player.displayClientMessage(Component.translatable("wandzz.wand.core_removed"), true);
             return InteractionResult.SUCCESS;
         });
+    }
+
+    /**
+     * Nasacenie: rozdzka w ktorejkolwiek rece + zywica w rece = +1 gniazdo na
+     * rdzen, szybszy regen i brama otwierana PPM bez gestu.
+     *
+     * @return false, jesli nie ma co nasaczyc (brak rozdzki / juz nasaczona) -
+     *         wowczas callback zwraca PASS i vanilla moze z tym stackiem zrobic
+     *         swoje (na razie nic: ARCANE_RESIN nie nadpisuje Item#use)
+     */
+    private static boolean infuse(Player player, ItemStack resin) {
+        ItemStack wand = WandItem.findWand(player);
+        if (wand == null) {
+            player.displayClientMessage(Component.translatable("wandzz.wand.needed"), true);
+            return false;
+        }
+        if (!WandItem.applyResin(wand)) {
+            player.displayClientMessage(Component.translatable("wandzz.wand.already_resinated"), true);
+            return false;
+        }
+        if (!player.isCreative()) {
+            resin.shrink(1);
+        }
+        player.displayClientMessage(Component.translatable("wandzz.wand.resinated"), true);
+        return true;
     }
 }

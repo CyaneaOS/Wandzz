@@ -358,6 +358,39 @@ PPM z różdżką → rysujesz gest → puszczenie PPM = wysyłka na serwer. Ka�
 odrzucone rzucenie mówi dlaczego (brak różdżki / różdżka bez rdzenia / rdzeń za
 niskiego poziomu / za mało many / gest nierozpoznany).
 
+## Drzewa, duch arkanu i żywica (nowa mechanika, nie naprawka)
+
+- Korona: trzy warstwy 7x7, czwarta 3x3, czubek plus 3–5 wiszących kosmyków;
+  naroża bywają odpuszczone, żeby brzeg był postrzępiony. Kosmyki mają
+  `persistent=true`, więc nie gniją poza zasięgiem pnia.
+- Kształt opisuje Java (`ArcaneStranglerFeature`), nie JSON: vanilla
+  `blob_foliage_placer` nie umie ani zwisania, ani spirali. Rejestr idzie jako
+  `wandzz:arcane_strangler`, a `configured_feature/arcane_tree.json` tylko je
+  wywołuje (ten sam feature obsługuje generowanie świata i wzrost z sadzonki).
+- Sadzonka na koronie innego drzewa NIE przebija gospodarza: feature schodzi do
+  dolnej krawędzi jego korony i wspina się spiralą (~35,5° na blok, pełny obrót
+  na ~10 bloków) dookoła pnia, a własną koronę stawia nad tamtą. Logi trafiają
+  tylko tam, gdzie pozwala `TreeFeature.validTreePos` — pień gospodarza nigdy
+  nie zostaje nadpisany.
+- `wandzz:arcane_sprite` wisi głową w dół w koronie i jest markerem „to drzewo
+  jest magiczne". ~34% nowo postawionych drzew dostaje ducha; zabity daje 1–2
+  żywicy; oswojony (PPM arcanym patykiem) zostaje i co 200 s zrzuca żywicę pod
+  siebie; naturalnie spawnuje tylko obok drzewa i nie despawni po odejściu.
+- `wandzz:arcane_resin` NIE jest nową „większą różdżką" — prawy klik trzyma ją na
+  różdżce. Nabita dostaje +1 slot rdzeni (arcane: 5/7 zamiast 4/6), ×1,2
+  regeneracji many (liczone po wyborze najsilniejszego rdzenia, więc słaby
+  zestaw nie kasuje bonus) oraz szybkie zapalenie bramy: PPM w zimny ember
+  odpala go od ręki (40 many, rdzeń lvl 3, bez gestu). Sneak+PPM to nadal
+  stara ścieżka gestu.
+- Modele blockstates: `arcane_log`/`arcane_log_horizontal` rodziców się do
+  `minecraft:block/cube_column[_horizontal]` (wcześniej `blocks/block`, czyli
+  klocka), `arcane_leaves` do `minecraft:block/leaves`, sapling do crossa.
+- Placeholdery tekstur (`assets/wandzz/textures/{block,item,entity}`, 6 PNG)
+  są po to, żeby kształt było widać w grze. Liscie są szare celowo: mnoży je
+  tint z `ColorProviderRegistry.BLOCK` w `WandzzClient` — chcesz malować
+  fiolet recznie, wywal te jedna linie. Tekstura encji musi miec 32x32
+  (`LayerDefinition.create(mesh, 32, 32)` definiuje skale UV).
+
 ## Czego brakuje / co warto dopracować dalej
 
 - **Cache bram jest w pamięci** – `GateService.LINKS` nie przeżywa restartu, więc

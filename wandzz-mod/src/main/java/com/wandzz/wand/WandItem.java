@@ -59,9 +59,37 @@ public class WandItem extends Item {
         return data != null ? data : WandData.EMPTY;
     }
 
-    /** Liczba gniazd; 0 jesli podany stack to nie rozdzka. */
+    /**
+     * Liczba gniazd; 0 jesli podany stack to nie rozdzka.
+     *
+     * TO JEST zrodlo prawdy o gniazdach (nie {@link #coreCapacity()}): baza idzie
+     * z gatunku drewna, a +{@value #RESIN_SLOTS} doklada zywica, ktora LEZY NA
+     * STACKU. Stad wszystkie sciezki (stolik klienta, insertCore,
+     * setLoadout, tooltip) musza liczyc z tej funkcji, a nie z itemu - inaczej rozdzka nasaczona
+     * przyjmowalaby rdzenie, ktorych UI nie pokazuje.
+     */
     public static int capacity(@Nullable ItemStack stack) {
-        return stack != null && stack.getItem() instanceof WandItem wand ? wand.coreCapacity() : 0;
+        if (stack == null || !(stack.getItem() instanceof WandItem wand)) {
+            return 0;
+        }
+        return wand.coreCapacity() + (getData(stack).resinated() ? RESIN_SLOTS : 0);
+    }
+
+    /** Bonus z zywicy arkanu - patrz {@link WandData#withResin()}. */
+    public static final int RESIN_SLOTS = 1;
+
+    /**
+     * Nasacenie rozdzki zywica. True = przyjel; false = byla juz nasaczona.
+     * Wolane z {@code WandInteractions} (PPM zywica), czyli tylko z serwera.
+     */
+    public static boolean applyResin(ItemStack wandStack) {
+        WandData current = getData(wandStack);
+        WandData updated = current.withResin();
+        if (updated == current) {
+            return false;
+        }
+        wandStack.set(ModComponents.WAND_DATA, updated);
+        return true;
     }
 
     /** Rozdzka trzymana przez gracza: najpierw reka glowna, potem druga; null jesli brak. */
@@ -98,7 +126,7 @@ public class WandItem extends Item {
     public static boolean setLoadout(ItemStack wandStack, List<CoreType> cores) {
         int capacity = capacity(wandStack);
         List<CoreType> fitted = new ArrayList<>(cores.subList(0, Math.min(capacity, cores.size())));
-        wandStack.set(ModComponents.WAND_DATA, new WandData(List.copyOf(fitted)));
+        wandStack.set(ModComponents.WAND_DATA, new WandData(List.copyOf(fitted), data.resinated()));
         return true;
     }
 
@@ -125,14 +153,22 @@ public class WandItem extends Item {
                         Component.translatable(wood.woodTranslationKey()))
                 .withStyle(ChatFormatting.GRAY));
 
+        if (data.resinated()) {
+            tooltip.accept(Component.translatable("wandzz.tooltip.resinated")
+                    .withStyle(ChatFormatting.LIGHT_PURPLE));
+        }
+
         if (magic) {
             tooltip.accept(Component.translatable("wandzz.tooltip.magic")
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
         }
 
-        tooltip.accept(Component.translatable("wandzz.tooltip.slots",
-                        cores.size(), coreCapacity())
-                .withStyle(cores.size() >= coreCapacity() ? ChatFormatting.GREEN : ChatFormatting.AQUA));
+        // capacity(itemStack), NIE coreCapacity(): nasaczona rozdzka ma jedno
+        // gniazdo wiecej i tooltip musilby to pokazac, inaczej "pelna" rozdzka
+        // z 5 rdzeniami wygladalaby na zbugowana.
+        int capacity = capacity(itemStack);
+        tooltip.accept(Component.translatable("wandzz.tooltip.slots", cores.size(), capacity)
+                .withStyle(cores.size() >= capacity ? ChatFormatting.GREEN : ChatFormatting.AQUA));
 
         if (cores.isEmpty()) {
             tooltip.accept(Component.translatable("wandzz.tooltip.no_cores")

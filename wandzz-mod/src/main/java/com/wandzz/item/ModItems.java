@@ -35,6 +35,11 @@ public final class ModItems {
     public static final Map<CoreType, WandCoreItem> CORES = new EnumMap<>(CoreType.class);
     /** Podrecznik gestow - otwiera okno z lista zaklec (brak progresji, patrz klasa). */
     public static Item SPELL_BOOK;
+    /**
+     * Zywica arkanu: drop ducha arkanu (oswojenie albo loot) - nasaca rozdzke,
+     * patrz {@link com.wandzz.wand.WandData#withResin()}.
+     */
+    public static Item ARCANE_RESIN;
 
     public static Item stick(WandWood wood) {
         Item stick = STICKS.get(wood);
@@ -62,6 +67,10 @@ public final class ModItems {
             registerWand(wood, false);
             registerWand(wood, true);
         }
+
+        ResourceKey<Item> resinKey = itemKey("arcane_resin");
+        ARCANE_RESIN = new Item(new Item.Properties().stacksTo(16).setId(resinKey));
+        Registry.register(BuiltInRegistries.ITEM, resinKey, ARCANE_RESIN);
 
         ResourceKey<Item> bookKey = itemKey("spell_book");
         SPELL_BOOK = new SpellBookItem(new Item.Properties().stacksTo(1).setId(bookKey));

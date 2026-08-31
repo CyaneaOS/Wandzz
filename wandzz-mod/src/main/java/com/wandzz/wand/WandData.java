@@ -24,23 +24,28 @@ import java.util.List;
  * stolika), a jawny kodek binarny jest tanszy niz JSON przez
  * {@code fromCodecWithRegistries} i nie zalezy od {@code RegistryFriendlyByteBuf}.
  */
-public record WandData(List<CoreType> cores) {
+public record WandData(List<CoreType> cores, boolean resinated) {
 
-    public static final WandData EMPTY = new WandData(List.of());
+    public static final WandData EMPTY = new WandData(List.of(), false);
 
     public static final Codec<WandData> CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.STRING.xmap(CoreType::valueOf, CoreType::name)
-                    .listOf().fieldOf("cores").forGetter(WandData::cores)
+                    .listOf().fieldOf("cores").forGetter(WandData::cores),
+            // optionalFieldOf + domyslnie false: KAZDY stary stack rozdzki w
+            // swiecie (i kazdy wpis z poprzedniej wersji) nadal sie czyta.
+            Codec.BOOL.optionalFieldOf("resinated", false).forGetter(WandData::resinated)
     ).apply(instance, WandData::new));
 
     public static final StreamCodec<FriendlyByteBuf, WandData> STREAM_CODEC = StreamCodec.of(
             (buf, data) -> {
+                buf.writeBoolean(data.resinated());
                 buf.writeVarInt(data.cores().size());
                 for (CoreType core : data.cores()) {
                     buf.writeUtf(core.name());
                 }
             },
             buf -> {
+                boolean resinated = buf.readBoolean();
                 int count = buf.readVarInt();
                 List<CoreType> cores = new ArrayList<>(Math.max(0, Math.min(count, 16)));
                 for (int i = 0; i < count; i++) {
@@ -49,7 +54,7 @@ public record WandData(List<CoreType> cores) {
                         cores.add(core);
                     }
                 }
-                return new WandData(List.copyOf(cores));
+                return new WandData(List.copyOf(cores), resinated);
             }
     );
 
@@ -68,7 +73,7 @@ public record WandData(List<CoreType> cores) {
         if (cores.size() >= capacity) return this;
         List<CoreType> updated = new ArrayList<>(cores);
         updated.add(core);
-        return new WandData(List.copyOf(updated));
+        return new WandData(List.copyOf(updated), resinated);
     }
 
     /**
@@ -79,7 +84,18 @@ public record WandData(List<CoreType> cores) {
         if (!cores.contains(core)) return this;
         List<CoreType> updated = new ArrayList<>(cores);
         updated.remove(core);
-        return new WandData(List.copyOf(updated));
+        return new WandData(List.copyOf(updated), resinated);
+    }
+
+    /**
+     * Nasacenie zywica arkanu (drop ducha, patrz {@code ArcaneSprite}): +1
+     * gniazdo na rdzen, +20% regeneracji many i brame otwiera samo PPM - bez
+     * rysowania gestu. Zwraca {@code this}, gdy juz nasaczona, zeby wolajacy
+     * rozroznil "nic nie zrobilem" po tozsamosci (ten sam trik co przy zdjeciu
+     * rdzenia).
+     */
+    public WandData withResin() {
+        return resinated ? this : new WandData(cores, true);
     }
 
     public boolean hasCore(CoreType core) {

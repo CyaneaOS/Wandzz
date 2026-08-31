@@ -117,6 +117,13 @@ public final class CastingHandler {
             multiplier = data.cores().stream()
                     .mapToDouble(CoreType::manaRegenMultiplier)
                     .max().orElse(1.0);
+            // Rozdzka nasaczona zywica arkanu (drop ducha, patrz WandData#withResin):
+            // +20% regenu. Mnozone PO doborze rdzeni, a nie dodane do wartosci -
+            // inaczej bonus ginie przy slabym skladzie, gdzie jest najbardziej
+            // potrzebny (bez zadnego rdzenia multiplier = 1.0 * 1.2).
+            if (data.resinated()) {
+                multiplier *= 1.2;
+            }
         }
 
         double perTick = (ManaComponent.DEFAULT_REGEN_PER_SECOND * multiplier) / 20.0;

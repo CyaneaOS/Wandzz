@@ -2,6 +2,13 @@ package com.wandzz.world;
 
 import com.wandzz.block.ArcaneEmberBlock;
 import com.wandzz.block.ModBlocks;
+import com.wandzz.mana.ManaAttachments;
+import com.wandzz.mana.ManaComponent;
+import com.wandzz.network.WandzzNetwork;
+import com.wandzz.spell.Spell;
+import com.wandzz.spell.SpellRegistry;
+import com.wandzz.wand.WandData;
+import com.wandzz.wand.WandItem;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -14,6 +21,8 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -116,6 +125,56 @@ public final class GateService {
         LINKS.put(to, from);
         tell(player, inArkanum(level) ? "wandzz.gate.escape" : "wandzz.gate.opened");
         return true;
+    }
+
+    // ------------------------------------------------------------------
+    // Skrot z nasaczonej rozdzki (PPM w zimny zar, bez gestu)
+    // ------------------------------------------------------------------
+
+    /** Id zakicia bramy - jedine zrodlo prawdy o koszcie i wymaganym rdzeniu. */
+    public static final String GATE_SPELL_ID = "wandzz:open_gate";
+
+    /**
+     * Czy PPM w zimny zar ma w ogole probowac zapalic brame bez gestu? Pytanie
+     * pada PO STRONIE KLIENTA ( zeby nie otwieral ekranu rysowania ) i PO STRONIE
+     * SERWERA ( zeby wiedzial, co zrobic ) - dlatego wolamy tylko
+     * {@code WandItem.findWand} i sklad z komponentu, zadnego stanu serwerowego.
+     * Many tu NIE sprawdzamy: klient ma jej wartosc max co 10 tickow starsza
+     * (patrz {@code CastingHandler.MANA_SYNC_PERIOD}), wiec decyzja "odmowic
+     * klika" na podstawie klienta bylaby bledna.
+     */
+    public static boolean quickIgniteReady(final Player player) {
+        final ItemStack wand = WandItem.findWand(player);
+        if (wand == null) {
+            return false;
+        }
+        final WandData data = WandItem.getData(wand);
+        return data.resinated() && data.hasCoreOfLevel(gateRequiredLevel());
+    }
+
+    /** true = zar zapalony i mana pobrana; false = brak many, stan nietkniety. */
+    public static boolean igniteWithInfusedWand(final ServerPlayer player, final ServerLevel level,
+            final BlockPos pos, final BlockState state) {
+
+        final @Nullable Spell gate = SpellRegistry.get(GATE_SPELL_ID).orElse(null);
+        if (gate == null) {
+            return false;
+        }
+        final ManaComponent mana = player.getAttachedOrCreate(ManaAttachments.MANA);
+        if (!mana.has(gate.manaCost())) {
+            tell(player, "wandzz.spell.not_enough_mana",
+                    (int) Math.ceil(gate.manaCost()), (int) Math.floor(mana.current()));
+            return false;
+        }
+        player.setAttached(ManaAttachments.MANA, mana.spend(gate.manaCost()));
+        WandzzNetwork.syncMana(player);
+        return ignite(level, pos, state, player);
+    }
+
+    /** Poziom rdzenia wymagany przez brame - czytany ze spellu, nie zaszyty tu. */
+    private static int gateRequiredLevel() {
+        final @Nullable Spell gate = SpellRegistry.get(GATE_SPELL_ID).orElse(null);
+        return gate == null ? 3 : gate.requiredLevel();
     }
 
     /**

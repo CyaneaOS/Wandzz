@@ -1,6 +1,7 @@
 package com.wandzz;
 
 import com.wandzz.block.ModBlocks;
+import com.wandzz.entity.ModEntities;
 import com.wandzz.item.ModComponents;
 import com.wandzz.item.ModItemGroups;
 import com.wandzz.item.ModItems;
@@ -34,6 +35,7 @@ public class Wandzz implements ModInitializer {
         ModComponents.bootstrap();
         ModBlocks.bootstrap();    // bloki przed ich BlockItemami
         ModItems.bootstrap();
+        ModEntities.bootstrap();   // encja + atrybuty (przed zakladka kreatywna)
         ModItemGroups.bootstrap(); // zakladka kreatywna - po rejestracji przedmiotow
         Spells.bootstrap();
         ModWorldgen.bootstrap(); // wtrysniecie zaru lawy do biomesow (musi byc po blokach)

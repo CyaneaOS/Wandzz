@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:block/cross",
   "textures": {
-    "cross": "minecraft:block/oak_sapling"
+    "cross": "wandzz:block/arcane_sapling"
   }
 }

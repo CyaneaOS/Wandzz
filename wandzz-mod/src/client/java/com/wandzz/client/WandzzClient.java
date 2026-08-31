@@ -1,11 +1,16 @@
 package com.wandzz.client;
 
+import com.wandzz.block.ModBlocks;
+import com.wandzz.entity.ModEntities;
 import com.wandzz.network.ManaRequestPayload;
 import com.wandzz.network.OpenBookPayload;
 import com.wandzz.network.ManaSyncPayload;
 import com.wandzz.network.OpenTablePayload;
 import com.wandzz.wand.WandItem;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
@@ -27,8 +32,23 @@ import net.minecraft.world.InteractionResult;
  */
 public class WandzzClient implements ClientModInitializer {
 
+    /**
+     * Fioletowa barwa lisci arkanskich. Liscie NIE moga brac koloru z biomesu -
+     * nasze drzewa wchodza w las, rownine i bagno, wiec wszedzie wygladalyby
+     * inaczej - totez tint jest staly. Bez tej linii model lisci (parent
+     * {@code minecraft:block/leaves}, {@code tintindex: 0}) bylby zielony jak deb,
+     * niezaleznie od tego, jaka teksture wlozy gracz.
+     */
+    private static final int ARCANE_LEAF_TINT = 0x9B5FE3;
+
     @Override
     public void onInitializeClient() {
+        // Duch arkanu: warstwa modelu, renderer i wlasna barwa lisci drzewa.
+        EntityModelLayerRegistry.registerModelLayer(
+                ArcaneSpriteModel.LAYER_LOCATION, ArcaneSpriteModel::createBodyLayer);
+        EntityRendererRegistry.register(ModEntities.ARCANE_SPRITE, ArcaneSpriteRenderer::new);
+        ColorProviderRegistry.BLOCK.register(
+                (state, view, pos, tintIndex) -> ARCANE_LEAF_TINT, ModBlocks.ARCANE_LEAVES);
         UseItemCallback.EVENT.register((player, world, hand) -> {
             // UseItemCallback#interact zwraca InteractionResult (nie InteractionResultHolder)
             if (!world.isClientSide()) {

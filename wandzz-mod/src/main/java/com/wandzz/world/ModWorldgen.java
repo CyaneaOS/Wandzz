@@ -3,6 +3,8 @@ package com.wandzz.world;
 import com.wandzz.Wandzz;
 import net.fabricmc.fabric.api.biome.v1.BiomeModifications;
 import net.fabricmc.fabric.api.biome.v1.BiomeSelectors;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -11,6 +13,8 @@ import net.minecraft.world.level.block.grower.TreeGrower;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.levelgen.GenerationStep;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 import java.util.Optional;
@@ -26,6 +30,20 @@ import java.util.Optional;
  * ryzyka, ze cos sie nie zdazy przed ladowaniem data-packow.
  */
 public final class ModWorldgen {
+
+    /**
+     * Typ feature'u {@code wandzz:arcane_strangler} - JEDYNY punkt moda, gdzie
+     * worldgen NIE jest czystym JSON-em. Oplatanie korony gospodarza nie da sie
+     * opisac vanilla {@code minecraft:tree}, a {@code TrunkPlacerType} ma w
+     * 1.21.11 prywatny konstruktor (wlasny placer = access widener, ktorego ten
+     * projekt swiadomie nie uzywa). Rejestr {@code FEATURE} nie jest rejestrem
+     * datapackowym, wiec wpis idzie przez {@code Registry.register} w kodzie -
+     * tak samo, jak vanilla robi to w statycznym bloku {@code Feature}.
+     */
+    public static final Feature<?> ARCANE_STRANGLER = Registry.register(
+            BuiltInRegistries.FEATURE,
+            ResourceKey.create(Registries.FEATURE, id("arcane_strangler")),
+            new ArcaneStranglerFeature(NoneFeatureConfiguration.CODEC));
 
     /** `wandzz:arcane_tree` w rejestrze `worldgen/configured_feature`. */
     public static final ResourceKey<ConfiguredFeature<?, ?>> ARCANE_TREE = ResourceKey.create(
@@ -73,6 +91,11 @@ public final class ModWorldgen {
         BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(),
                 GenerationStep.Decoration.UNDERGROUND_ORES, ARCANE_EMBER_VEIN);
         Wandzz.LOGGER.info("Wandzz: arcane_ember wtrysniety do biomesow nadziemnych (UNDERGROUND_ORES)");
+        // ARCANE_STRANGLER zarejestrowal sie przy ladowaniu tej klasy; logujemy
+        // klucz, bo to on decyduje, czy configured_feature/arcane_tree.json w ogole
+        // sie zdekoduje (zly id = "Failed to load registries due to errors").
+        Wandzz.LOGGER.info("Wandzz: typ feature'u {} zarejestrowany",
+                String.valueOf(BuiltInRegistries.FEATURE.getKey(ARCANE_STRANGLER)));
     }
 
     public static Identifier id(String path) {

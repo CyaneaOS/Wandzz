@@ -50,6 +50,8 @@ public final class ModItemGroups {
                     for (WandWood wood : WandWood.values()) {
                         output.accept(ModItems.stick(wood));
                     }
+                    // 3b. Zywica arkanu - nasaca rozdzke (drop ducha arkanu).
+                    output.accept(ModItems.ARCANE_RESIN);
                     // 4. Ksiega zaklec (podrecznik gestow, zero progresji).
                     output.accept(ModItems.SPELL_BOOK);
                     // 5. Bloki arkanum: drewno, sadzonka, liscie, stol i zar.

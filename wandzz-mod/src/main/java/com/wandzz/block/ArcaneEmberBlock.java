@@ -78,6 +78,7 @@ public class ArcaneEmberBlock extends Block {
      *   lit=true                      -> nasza brama: travel + SUCCESS
      *   lit=false, obie rece puste    -> podpowiedz w action barze (nic wiecej nie ma co robic)
      *   lit=false, cos w rece         -> PASS  (klik dostaje przedmiot = rozdzka = czar)
+     *   lit=false + NASACZONA rozdzka -> zaplenie od reki (CONSUME), bez gestu
      */
     @Override
     protected InteractionResult useWithoutItem(final BlockState state, final Level level, final BlockPos pos,
@@ -91,6 +92,19 @@ public class ArcaneEmberBlock extends Block {
         }
 
         if (!state.getValue(LIT)) {
+            // Rozdzka nasaczona zywica arkanu (WandData#withResin) otwiera brame
+            // SAMYM PPM, bez rysowania gestu. Kucanie + PPM wciaz trafia do
+            // rozdzki, wiec normalne rzucanie wandzz:open_gate pozostaje
+            // dostepne - to wazne, bo bez many skrot i tak nie zadziala.
+            if (GateService.quickIgniteReady(player)) {
+                if (!level.isClientSide() && level instanceof ServerLevel serverLevel
+                        && player instanceof ServerPlayer serverPlayer) {
+                    GateService.igniteWithInfusedWand(serverPlayer, serverLevel, pos, state);
+                }
+                // CONSUME, nie SUCCESS: klik obsluzony, ale bez machania reka -
+                // zapalanie zaru nie jest "uzyciem przedmiotu".
+                return InteractionResult.CONSUME;
+            }
             boolean emptyHands = player.getMainHandItem().isEmpty() && player.getOffhandItem().isEmpty();
             if (!emptyHands) {
                 return InteractionResult.PASS;
