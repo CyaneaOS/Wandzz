@@ -37,12 +37,18 @@ import net.minecraft.world.level.Level;
  */
 public class ChronosBoss extends PathfinderMob {
 
-    private final ServerBossEvent bossEvent = (ServerBossEvent) new ServerBossEvent(
-            this.getDisplayName(), BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.NOTCHED_10)
-            .setDarkenScreen(true);
+    /**
+     * Bez lancucha {@code (ServerBossEvent) new ServerBossEvent(...).setDarkenScreen(true)}:
+     * {@code setDarkenScreen} zwraca {@code BossEvent}, a nie {@code ServerBossEvent},
+     * więc taki zapis opiera sie wylacznie na kowariantnym nadpisaniu w vanilla.
+     * Ustawiamy flage w konstruktorze i nie zalezymy od typu zwrotu.
+     */
+    private final ServerBossEvent bossEvent = new ServerBossEvent(
+            this.getDisplayName(), BossEvent.BossBarColor.YELLOW, BossEvent.BossBarOverlay.NOTCHED_10);
 
     public ChronosBoss(final EntityType<? extends ChronosBoss> type, final Level level) {
         super(type, level);
+        this.bossEvent.setDarkenScreen(true);
     }
 
     public static AttributeSupplier.Builder createAttributes() {

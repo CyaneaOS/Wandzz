@@ -80,8 +80,12 @@ public class Phoenix extends PathfinderMob {
         }
     }
 
+    /**
+     * {@code die} jest w LivingEntity PUBLICZNE - nadpisanie jako protected to
+     * "weaker access privileges" (pierwszy blad z javac).
+     */
     @Override
-    protected void die(final DamageSource source) {
+    public void die(final DamageSource source) {
         super.die(source);
         if (!(this.level() instanceof ServerLevel level)) {
             return;
@@ -92,9 +96,14 @@ public class Phoenix extends PathfinderMob {
                 this.getX(), this.getY() + 0.5, this.getZ(),
                 32, 0.7, 0.5, 0.7, 0.05);
         this.playSound(SoundEvents.BLAZE_AMBIENT, 1.0F, 0.7F);
-        final Entity attacker = source.getCausingEntity();
+        // getEntity() = sprawca (to, co trzymalo miecz), getDirectEntity() =
+        // bezposredni nosiciel obrazen (strzala, kula) - javac slusznie nie zna
+        // "getCausingEntity()", bo w 1.21.11 akcesor nazywa sie po prostu getEntity.
+        final Entity attacker = source.getEntity();
         if (attacker instanceof LivingEntity living && living.isAlive()) {
-            living.setSecondsOnFire(4);
+            // igniteForSeconds(float): setSecondsOnFire zniknelo w 1.21.x razem z
+            // przeliczaniem sekund na ticki w samym encie
+            living.igniteForSeconds(4.0F);
         }
     }
 
