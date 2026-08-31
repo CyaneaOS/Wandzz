@@ -9,6 +9,13 @@ import net.minecraft.resources.Identifier;
 /**
  * Renderer ducha arkanu.
  *
+ * Trzy argumenty typowe to nie nadgorliwosc: w 1.21.9+ MobRenderer ma ich
+ * wlasnie trzy - <T extends Mob, S extends LivingEntityRenderState,
+ * M extends EntityModel<S>> (trzeci dojel, zeby getModel() zwrocil model o
+ * znanym typie zamiast surowego EntityModel); EntityRenderer nadal ma dwa.
+ * MobRenderState w 1.21.11 NIE ISTNIEJE - sciezka to BatRenderState extends
+ * LivingEntityRenderState, wiec i my dziedziczymy po LivingEntityRenderState.
+ *
  * Trzy sygnatury musza byc w 1.21.11 dokladnie takie jak w vanilla (wzor:
  * {@code BatRenderer}), bo to nie sa nadpisania "z gwaltu":
  *   - {@code createRenderState()} - nowy stan na kazda encje,
@@ -17,7 +24,7 @@ import net.minecraft.resources.Identifier;
  *   - {@code getTextureLocation(stan)} - bierze STAN, nie encje: vanilla nie ufa
  *     juz temu, ze renderer moze siegac do swiata.
  */
-public class ArcaneSpriteRenderer extends MobRenderer<ArcaneSprite, ArcaneSpriteRenderState> {
+public class ArcaneSpriteRenderer extends MobRenderer<ArcaneSprite, ArcaneSpriteRenderState, ArcaneSpriteModel> {
 
     private static final Identifier TEXTURE =
             Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, "textures/entity/arcane_sprite.png");

@@ -116,6 +116,7 @@ dopasowane:
 | `registerDefaultState(this.stateDefinition.any())` | pola `stateDefinition` nie widać z podklasy; idiom vanilli (`RedstoneLampBlock`) to `registerDefaultState(this.defaultBlockState().setValue(LIT, false))` |
 | `Level#getHeightmap(...)` | nie ma takiego wywołania: jest `Level#getHeight(Heightmap.Types, int x, int z)` (ewentualnie `getHeightmapPos`); pozycję platformy bramy liczymy z niego |
 | własne PNG dla „znaleziska w lawie“ | zbędne: `minecraft:block/cube_all` z `minecraft:block/crying_obsidian` / `minecraft:block/shroomlight` – ten sam trik co przy stoliku (`cube_bottom_top` + `crafting_table_top`), zero assetów do odgadywania |
+| `MobRenderer<ArcaneSprite, ArcaneSpriteRenderState>` – „wrong number of type arguments; required 3” | w 1.21.9+ `MobRenderer` ma **trzy** parametry: `<T extends Mob, S extends LivingEntityRenderState, M extends EntityModel<S>>` (trzeci po to, by `getModel()` zwracał model o znanym typie). `EntityRenderer` nadal dwa – stąd mylący komunikat. Wszystkie `@Override: method does not override` i `cannot find symbol: variable super` były kaskadą po uszkodzonej deklaracji nadklasy, nie osobnymi błędami. `MobRenderState` w 1.21.11 nie istnieje – stan po `LivingEntityRenderState`, tak jak `BatRenderState` |
 
 Wszystkie użyte nazwy klas i metod zostały sprawdzone bezpośrednio na źródłach
 Minecraft 1.21.11 z oficjalnymi mapowaniami Mojanga oraz na źródłach
