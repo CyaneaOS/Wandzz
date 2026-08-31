@@ -225,6 +225,29 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
     // ------------------------------------------------------------------
 
     /**
+     * Wybor bloku, na ktorym duch wisi: interesuje nas lisc z POWIETRZEM pod
+     * soba, bo to jest dolna krawedz korony - tylko tam sylwetka czyta sie jako
+     * "zwisa z lisci", a nie "stoi w drzewie". Kandydaci pochodza z warstw 2-3
+     * (patrz placeCanopy), wiec probujemy osiem razy, az trafimy w wolna
+     * przestrzen; jak korona jest cala zbite, bierzemy ostatniego kandydata, a
+     * dopiero gdy ich nie ma - punkt awaryjny dwa bloki pod szczytem.
+     */
+    private static BlockPos pickPerch(final WorldGenLevel level, final RandomSource random,
+            final List<BlockPos> rim, final BlockPos fallback) {
+
+        if (rim.isEmpty()) {
+            return fallback;
+        }
+        for (int attempt = 0; attempt < 8; attempt++) {
+            final BlockPos cand = rim.get(random.nextInt(rim.size()));
+            if (level.getBlockState(cand.below()).isAir()) {
+                return cand;
+            }
+        }
+        return rim.get(rim.size() - 1);
+    }
+
+    /**
      * Spawn w swiecie generowanym - dokladnie ta sama sciezka, ktora idzie
      * vanilla dla krysztalow w {@code SpikeFeature}: encje tworzymy przez
      * {@code EntityType#create(level.getLevel(), reason)} i dodajemy przez
