@@ -33,6 +33,8 @@ public final class ModItems {
     public static final Map<WandWood, WandItem> WANDS = new EnumMap<>(WandWood.class);
     public static final Map<WandWood, WandItem> MAGIC_WANDS = new EnumMap<>(WandWood.class);
     public static final Map<CoreType, WandCoreItem> CORES = new EnumMap<>(CoreType.class);
+    /** Podrecznik gestow - otwiera okno z lista zaklec (brak progresji, patrz klasa). */
+    public static Item SPELL_BOOK;
 
     public static Item stick(WandWood wood) {
         Item stick = STICKS.get(wood);
@@ -60,6 +62,10 @@ public final class ModItems {
             registerWand(wood, false);
             registerWand(wood, true);
         }
+
+        ResourceKey<Item> bookKey = itemKey("spell_book");
+        SPELL_BOOK = new SpellBookItem(new Item.Properties().stacksTo(1).setId(bookKey));
+        Registry.register(BuiltInRegistries.ITEM, bookKey, SPELL_BOOK);
 
         for (CoreType core : CoreType.values()) {
             ResourceKey<Item> key = itemKey(core.translationKey());

@@ -15,11 +15,12 @@ Mysz -> MouseInput -> CastingData (List<Point>) -> $1 Recognizer
   Recognizer** (Wobbrock/Wilson/Li 2007): resample → rotate → scale+translate →
   golden-section search po kącie obrotu. Napisana od zera na podstawie opisu
   algorytmu, nie skopiowana z żadnego repozytorium.
-- **`spell/`** – interfejs `Spell`, rejestr `SpellRegistry`, oraz 7 przykładowych
-  zaklęć: `StrikeSpell`, `BreakBlockSpell`, `TorchSpell` (Feather Core, lvl 1),
-  `FireballSpell` (lvl 2), `TeleportSpell`, `BombSpell`, `DragonBreathSpell`
-  (lvl 3 – dostępne dla **każdego** core'a lvl 3+, nie tylko Dragon Breath Core,
-  zgodnie z dokumentem).
+- **`spell/`** – interfejs `Spell`, rejestr `SpellRegistry` oraz 8 zaklęć:
+  `StrikeSpell`, `BreakBlockSpell`, `TorchSpell` (lvl 1), `FireballSpell` (lvl 2),
+  `TeleportSpell`, `BombSpell`, `DragonBreathSpell` (lvl 3 – dostępne dla
+  **każdego** core'a lvl 3+, nie tylko Dragon Breath Core, zgodnie z dokumentem)
+  i `OpenGateSpell` (lvl 3 – odpalenie bramy do Arkanum). `Spell#canCast` pozwala
+  odmówić *przed* pobraniem many, gdy nie ma celu (patrz „Przejście do Arkanum“).
 - **`core/CoreType`** – 15 typów core'ów z poziomami. W pełni opisane w dokumencie
   (`FEATHER` lvl 1, `DRAGON_BREATH` lvl 3) są gotowe; pozostałe 13 to sloty do
   dalszej rozbudowy (nazwy/poziomy do dopracowania razem z Tobą).
@@ -29,8 +30,17 @@ Mysz -> MouseInput -> CastingData (List<Point>) -> $1 Recognizer
   synchronizowany do klienta (dlatego tooltip i okno stolika widzą skład).
 - **`block/` + `world/`** – kłoda, deski, liście, sadzonka i **stolik arcaniczny**;
   biom `wandzz:arcane_forest`, drzewo i wymiar `wandzz:arkanum` w 100% danymi.
-- **`client/WandzzHud`** – pionowy pasek many nad hotbarem, zasilany z
-  `ManaSyncPayload` (Data Attachment serwera nie jest synchronizowany sam z siebie).
+- **`client/WandzzHud`** – pasek many, który **liczy geometrię z ekranu** (patrz
+  „HUD many“): pionowy przy wolnej stronie hotbara, a gdy miejsca nie ma – poziomy
+  nad rzędami serc. Zasilany z `ManaSyncPayload` (Data Attachment serwera nie jest
+  synchronizowany sam z siebie).
+- **`item/SpellBookItem` + `client/SpellBookScreen`** – księga zaklęć
+  (`wandzz:spell_book`): 3 wpisy na stronę, każdy z nazwą, opisem, kosztem many,
+  listą rdzeni i **rysunkiem gestu** generowanym z tych samych punktów, które
+  trafiają do recognize'a. Referencja bez progresji – patrz „Księga zaklęć“.
+- **`block/ArcaneEmberBlock` + `world/GateService`** – `wandzz:arcane_ember`: blok
+  generowany w jeziorkach lawy w podziemiach; zaklęcie `wandzz:open_gate` odpala z
+  niego bramę do `wandzz:arkanum` i z powrotem (patrz „Przejście do Arkanum“).
 - **`mana/`** – mana jako Fabric Data Attachment, z regeneracją zależną od core'a.
 - **`network/`** – klient rozpoznaje gest lokalnie (płynność), ale **serwer**
   ostatecznie weryfikuje, czy różdżka ma wymagany core i czy starcza many,
@@ -95,6 +105,14 @@ dopasowane:
 | gest `strike` = pozioma kreska | $1 jest odporny na obrót, więc „kreska" i „kreska z hakiem" (torch) to po normalizacji ten sam kształt – czary myliły się między sobą. `strike` to teraz czkawka (V) |
 | cast odrzucany po cichu (`return` bez komunikatu) | każdy przypadek odmowy (brak różdżki / brak rdzenia / za mało many / nierozpoznany gest) dostaje teraz action bar; poza tym testowany zbiór wzorców daje 100% trafień przy szumie 6 px i obrocie ±63° |
 | `build.gradle` bez `publishing`/`jar`/`encoding` | uzupełnione wg oficjalnego template'u + `options.encoding = "UTF-8"` |
+| `LeavesBlock is abstract; cannot be instantiated` | w 1.21.11 `LeavesBlock` jest abstract (ma `public abstract MapCodec codec()`); liście buduje się przez `TintedParticleLeavesBlock(float leafParticleChance, Properties)` (jak `oak_leaves`) albo `UntintedParticleLeavesBlock(chance, ParticleOptions, Properties)` |
+| `player.level().getGameTime()` | `getGameTime()` leży na `ServerLevel`/`ClientLevel`, **nie** na `Level` → throttling synchronizacji many liczy się od `player.tickCount` (publiczne pole `Entity`, vanilla: `this.tickCount % 20 == 0`) |
+| pasek many nachodził na slot offhandu i uciekał z ekranu | geometria liczona ze stałych vanilli + wybór strony + wariant poziomy (sekcja „HUD many“) |
+| mana pobierana nawet bez celu | `Spell#canCast(ServerLevel, Player)` sprawdzane w `CastingHandler` **przed** `mana.spend(...)` |
+| własny `BiomeModifier` JSON-owy na wstrzyknięcie rudy | zbędny: `net.fabricmc.fabric.api.biome.v1.BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(), GenerationStep.Decoration.UNDERGROUND_ORES, klucz)` – zero plików w `data/minecraft`, zero TerraBlendera |
+| `registerDefaultState(this.stateDefinition.any())` | pola `stateDefinition` nie widać z podklasy; idiom vanilli (`RedstoneLampBlock`) to `registerDefaultState(this.defaultBlockState().setValue(LIT, false))` |
+| `Level#getHeightmap(...)` | nie ma takiego wywołania: jest `Level#getHeight(Heightmap.Types, int x, int z)` (ewentualnie `getHeightmapPos`); pozycję platformy bramy liczymy z niego |
+| własne PNG dla „znaleziska w lawie“ | zbędne: `minecraft:block/cube_all` z `minecraft:block/crying_obsidian` / `minecraft:block/shroomlight` – ten sam trik co przy stoliku (`cube_bottom_top` + `crafting_table_top`), zero assetów do odgadywania |
 
 Wszystkie użyte nazwy klas i metod zostały sprawdzone bezpośrednio na źródłach
 Minecraft 1.21.11 z oficjalnymi mapowaniami Mojanga oraz na źródłach
@@ -153,6 +171,8 @@ regeneracji many i podpowiedź, jak go zamontować.
 | `wandzz:arcane_leaves` | liście (`LeavesBlock`, gniją bez nożyc) | łamanie liści |
 | `wandzz:arcane_sapling` | sadzonka (`ArcaneSaplingBlock`) | 5% szansa z liści |
 | `wandzz:arcane_table` | **stolik arcaniczny** (patrz niżej) | 3 deski + 2 patyki arkańskie |
+| `wandzz:arcane_ember` | **Arkanny Zar** – kotwica bramy (patrz niżej) | jeziorka lawy w podziemiach, Y ∈ <-52, 0>; wymagany kilof z żelaza |
+| `wandzz:spell_book` | **Księga zaklęć** – podręcznik gestów i kosztów | 1 książka + 4 patyki arkańskie |
 
 Świat generowany jest **w całości danymi** (żadnego mixinu ani `BiomeModifier`):
 
@@ -213,12 +233,25 @@ wyjmuje go z różdżki (`WandInteractions`).
 
 ### HUD many
 
-Pionowy pasek 6 × 60 px po prawej stronie, tuż nad hotbarem (10 px na prawo od
-jego krawędzi, żeby nie nachodzić na poziom doświadczenia) — `client/WandzzHud`,
-zgłoszony przez `HudElementRegistry.addLast(wandzz:mana_bar, ...)` (Fabric
-1.21.11: dawny `HudLayerRegistrationCallback` został zastąpiony rejestrem
-elementów HUD). Kreski co 1/10 wysokości, liczba nad paskiem, biała kreska na
-górze słupka = mana właśnie wraca, kolor ciemnieje poniżej 25%.
+Pasek **nie ma stałej pozycji** – runda 4 miała `x = szerokość/2 + 100` na sztywno
+i to był błąd: prawa krawędź hotbara to `/2 + 91`, a kiedy gracz coś trzyma w
+drugiej ręce, vanilla dokleja tam slot offhandu (+29 px), więc pasek wchodził na
+ekwipunek; przy dużym GUI scale etykieta wychodziła za ekran. Teraz
+`client/WandzzHud` liczy wszystko ze stałych, których używa sama vanilla
+(`Gui#renderItemHotbar`, `Gui#renderPlayerHealth`):
+
+| warunek | układ |
+|---|---|
+| po którejś stronie hotbara zostaje ≥ grubość + 12 px | pionowy słupek 6–8 × 20–60 px przy tej stronie (preferowana prawa), dół przy `h - 24` |
+| nie zostaje (wąskie albo wysokie okno) | poziomy pasek nad rzędem serc, na szerokość hotbara (`h - 39`, rzędy co `max(10 - (rzędy-2), 3)`) |
+| wysokość słupka < 40 px | podziałka co 1/5 zamiast co 1/10 |
+| F1, tryb widza, brak `ManaSyncPayload` | nie rysujemy nic |
+
+Grubość słupka zależy od szerokości skalowanego okna (8 px od 470, poniżej 6 px),
+a etykieta `Mana: x / y` jest przyklejana tak, żeby została w ekranie – jeśli się
+nie mieści, odpada (sam słupek jest czytelny). Zgłoszone przez
+`HudElementRegistry.addLast(wandzz:mana_bar, ...)` (Fabric 1.21.11: dawny
+`HudLayerRegistrationCallback` został zastąpiony rejestrem elementów HUD).
 
 Mana żyje w Data Attachment po stronie serwera i **nie jest synchronizowana**,
 dlatego doszły dwa małe pakiety: `ManaSyncPayload` (S2C — po rzuceniu, ~2×/s
@@ -227,11 +260,75 @@ prosi przy `ClientPlayConnectionEvents.JOIN`, więc respawn, zmiana wymiaru i
 relog też dostają aktualny stan). Klient wygładza wskaźnik lerpem, więc pasek
 płynie, choć serwer wysyła go 2 razy na sekundę.
 
+### Księga zaklęć
+
+`wandzz:spell_book` = książka + 4 patyki arkańskie (`crafting_shaped`, kategoria
+`equipment`). PPM otwiera panel 236 × 184 px: nazwa, opis, koszt many + wymagany
+poziom rdzenia, lista rdzeni, które dają dane zaklęcie, oraz kratka 34 px z
+diagramem gestu (cyanowa linia = ścieżka, żółty kwadracik = początek).
+
+Trzy decyzje warte odnotowania:
+
+- **kolejność stron to kolejność rejestracji** – `SpellRegistry.all()` iteruje
+  `LinkedHashMap`, więc `Spells.bootstrap()` deklaruje jednocześnie spis treści;
+- **księga niczego nie odblokowuje** – jedynym warunkiem jest
+  `Spell#isProvidedBy`, a on i tak patrzy na rdzenie w różdżce. Drugi system
+  postępu za jeden ekran informacyjny nie byłby niczym uzasadniony (świadoma
+  rezygnacja);
+- **otwarcie idzie przez serwer** – `SpellBookItem#use` wysyła `OpenBookPayload`
+  (S2C), a `WandzzClient` otwiera `Screen`. Dokładnie ten sam schemat co stolik:
+  `MenuType` jest w 1.21.11 prywatny, więc własny ekran + pakiet, bez
+  `AbstractContainerMenu` i bez access widenera.
+
+Diagram jest **rysowany, nie wczytany z pliku PNG**: `SpellRegistry.gestureOf(id)`
+zwraca te same `List<Point>`, które trafiają do recognize'a. Gotową grafikę można
+rozjechać ze wzorcem, a tu nie ma na to szans.
+
+### Przejście do Arkanum: Arkanny Zar
+
+`wandzz:arcane_ember` – fioletowy, lekko świecący blok (lightLevel 4) zbudowany z
+tekstur vanilli (`crying_obsidian`, po zapaleniu `shroomlight`). Generuje się w
+jeziorach lawy: feature `minecraft:ore` z `target = match_block minecraft:lava`,
+`size 4`, `count 6`, Y ∈ <-52, 0>, wstrzyknięty do biomów nadziemnych przez
+`BiomeModifications.addFeature(..., UNDERGROUND_ORES, ...)` (patrz
+`ModWorldgen.bootstrap`). `discard_chance_on_air_exposure` **musi** zostać 0 –
+żyłka domyślnie leży w otwartej przestrzeni jeziorka, a przy 0.7 (diament)
+vanilla by ją wyrzucała.
+
+Obsługa:
+
+| krok | co się dzieje |
+|---|---|
+| gest bramy, patrząc w zimny zar | `OpenGateSpell.canCast` = true → 40 many → `GateService.ignite` |
+| `ignite` | zar przechodzi w `lit=true`; po stronie Arkanum jest odnajdywana albo stawiana platforma 5 × 5 z desek z zapalonym zarze w środku |
+| PPM w zapalony zar | `GateService.travel` = `ServerPlayer#teleport(TeleportTransition)` z `PLAY_PORTAL_SOUND + PLACE_PORTAL_TICKET` |
+| PPM w zar po stronie Arkanum | ten sam kod, w drugą stronę – **bez kosztu many** |
+| zar w Arkanum bez pary (brama w świecie zniknęła) | rzuć zaklęcie w ten zar: `emergencyExit` wyprowadza na powierzchnię pod `pozycja · 8` |
+
+Skala jest jak w Netherze: **1 blok w Arkanum = 8 w świecie**, a połączenie jest
+**liczone z pozycji**, nie czytane z pliku. Dlatego nie ma tu `BlockEntity` ani
+`SavedData` (ten drugi wymaga w 1.21.11 `SavedDataType` wraz z `DataFixTypes` –
+za dużo API na jedną parę współrzędnych). `GateService.LINKS` to tylko cache; po
+resecie serwera `reconnect(...)` odtwarza parę tym samym wzorem, a jeśli w świecie
+nie ma już zapalonego zaru – powierzchnia. Żar jest `pushReaction(BLOCK)` i ma
+odporność na eksplozje 1200, bo przestawienie go tłumikiem rozłączałoby parę.
+
+Przy PPM na bramie chodzi o `useWithoutItem`, wiec przechodzisz **z pusta reka
+albo z przedmiotem bez wlasnej akcji** (motyka, noz). Z przedmiotem nadajacym sie
+do uzycia (blok, rozdzka) vanilla idzie jego sciezka - i slusznie: blok postawisz
+na zarze, a rozdzka otworzy okno rysowania.
+
+Zaklęcie: `wandzz:open_gate`, rdzeń poziomu 3+, 40 many, zasięg patrzenia 6 bloków
+(tak jak `break_block`). Odmowa celu **nie kosztuje many** – `CastingHandler` pyta
+o `Spell#canCast` przed płatnością.
+
 ### Wzorce gestów
 
-Dokładny kształt każdego gestu (start, kolejność wierzchołków, kierunek) jest na
-`docs/gestures.png` — wyrenderowany z tych samych punktów, które trafiają do
-`SpellRegistry`, więc to jest źródło prawdy 1:1.
+Ładniejszy sposób obejrzenia gestów niż tablica poniżej: otwórz **księgę zaklęć** –
+diagramy są rysowane bezpośrednio z tych samych punktów, które trafiają do
+`SpellRegistry`, więc nie mogą się rozjechać z kodem. `docs/gestures.png` to ten sam
+widok, ale wyrenderowany w rundzie 4 (7 gestów, bez `open_gate`) – zostaje jako
+snapshot do porównań, nie źródło prawdy.
 
 Współrzędne wzorców (przestrzeń robocza ±100, oś Y w dół; rozpoznawanie jest
 niezależne od skali i obrotu):
@@ -245,6 +342,7 @@ niezależne od skali i obrotu):
 | `teleport` | `(-100,-100) (20,-100) (-60,0) (100,0) (-20,100) (100,100)` | otwarty |
 | `bomb` | `(-100,-100) (100,100) (100,-100) (-100,100)` | otwarty |
 | `dragon_breath` | spirala `r = 100·i/48`, `φ = 4π·i/48`, i = 0…48 (od środka) | otwarty |
+| `open_gate` | `(-100,100) (-100,-100) (100,-100) (100,100)` – łuk/brama | otwarty |
 
 Ważne: **podnoszenie myszy nie przerywa rysowania** — `CastingScreen` zbiera ruch
 ciągle, więc „powrót" kursora (np. z dołu prawego do górnego prawego przy X) jest
@@ -258,6 +356,14 @@ odrzucone rzucenie mówi dlaczego (brak różdżki / różdżka bez rdzenia / rd
 niskiego poziomu / za mało many / gest nierozpoznany).
 
 ## Czego brakuje / co warto dopracować dalej
+
+- **Cache bram jest w pamięci** – `GateService.LINKS` nie przeżywa restartu, więc
+  pierwsze przejście po restarcie idzie przez `reconnect(...)` (wzór
+  arytmetyczny + skan kolumn w paśmie generowania). Działa, ale warto znać
+  ograniczenie: dwa światy z tym samym seedem mogą trafić na to samo `x/8, z/8` i
+  wtedy dwie bramy nadziemne dzielą jedną platformę. Następcą tego jest
+  `SavedData` z `SavedDataType(id, supplier, codec, DataFixTypes)` – API dostępne,
+  tylko świadomie nieużyte.
 
 - Pozostałe 13 core'ów ma tylko nazwę i poziom – potrzebują własnych zaklęć
   i efektów (analogicznie do Feather/Dragon Breath).

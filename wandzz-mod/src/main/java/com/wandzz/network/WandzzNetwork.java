@@ -42,6 +42,7 @@ public final class WandzzNetwork {
         PayloadTypeRegistry.playC2S().register(WandLoadoutPayload.ID, WandLoadoutPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(ManaSyncPayload.ID, ManaSyncPayload.CODEC);
         PayloadTypeRegistry.playS2C().register(OpenTablePayload.ID, OpenTablePayload.CODEC);
+        PayloadTypeRegistry.playS2C().register(OpenBookPayload.ID, OpenBookPayload.CODEC);
 
         // Klient prosi o stan przy dolaczeniu (respawn / zmiana wymiaru / relog).
         ServerPlayNetworking.registerGlobalReceiver(ManaRequestPayload.ID,

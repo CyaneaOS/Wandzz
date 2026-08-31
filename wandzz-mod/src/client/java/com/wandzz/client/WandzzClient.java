@@ -1,6 +1,7 @@
 package com.wandzz.client;
 
 import com.wandzz.network.ManaRequestPayload;
+import com.wandzz.network.OpenBookPayload;
 import com.wandzz.network.ManaSyncPayload;
 import com.wandzz.network.OpenTablePayload;
 import com.wandzz.wand.WandItem;
@@ -53,6 +54,10 @@ public class WandzzClient implements ClientModInitializer {
         // PPM na stoliku: to serwer decyduje i wysyla pakiet S2C -> otwieramy okno.
         ClientPlayNetworking.registerGlobalReceiver(OpenTablePayload.ID,
                 (payload, context) -> Minecraft.getInstance().setScreen(new WandCoreScreen()));
+
+        // PPM ksiega zaklec: ten sam schemat (serwer decyduje, klient rysuje).
+        ClientPlayNetworking.registerGlobalReceiver(OpenBookPayload.ID,
+                (payload, context) -> Minecraft.getInstance().setScreen(new SpellBookScreen()));
 
         // Po wejsciu na swiat prosimy o stan many (respawn i zmiana wymiaru tez
         // tu wpadaja) - wczesniej HUD zostawal "pusty" do pierwszego rzucenia czaru.

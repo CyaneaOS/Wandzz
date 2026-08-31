@@ -29,6 +29,17 @@ public interface Spell {
     void cast(ServerLevel world, Player caster);
 
     /**
+     * Czy zaklecie w ogole ma sens w aktualnej sytuacji (cel pod patrzem,
+     * pora dnia, wymiar...). CastingHandler sprawdza to PRZED pobraniem many,
+     * zeby niekasowa "spalonego" punktu za strzal w powietrze. Domyslnie: zawsze.
+     *
+     * @return false = nie pobieraj many, nie rzucaj (komunikat lezy w canCast/cast)
+     */
+    default boolean canCast(ServerLevel world, Player caster) {
+        return true;
+    }
+
+    /**
      * Czy dany typ core'a we rozdzce udostepnia to zaklecie.
      * Domyslnie: core musi miec poziom >= requiredLevel().
      * Nadpisz jesli zaklecie ma byc dostepne tylko dla konkretnych core'ow

@@ -38,6 +38,7 @@ public final class ModBlocks {
     public static LeavesBlock ARCANE_LEAVES;
     public static ArcaneSaplingBlock ARCANE_SAPLING;
     public static ArcaneTableBlock ARCANE_TABLE;
+    public static ArcaneEmberBlock ARCANE_EMBER;
 
     public static void bootstrap() {
         ARCANE_LOG = register("arcane_log",
@@ -73,6 +74,26 @@ public final class ModBlocks {
 
         ARCANE_TABLE = register("arcane_table", props -> new ArcaneTableBlock(props
                 .strength(2.5f, 3.0f)));
+
+        // Arkanny zar (kotwica bramy). Wlasciwosci dobrane pod "znaleziony w
+        // lawie", nie pod "wydobyty na zapas":
+        //  lightLevel 4/15 - swieci dosyc, by gracza go dostrzegla w jaskini,
+        //    a po zapaleniu bylo go widac z daleka;
+        //  explosionResistance 1200 + pushReaction(BLOCK) - polaczenie bram jest
+        //    liczane z pozycji (patrz GateService), wiec przestawienie bloku
+        //    tlumikiem albo wybuchem rozlaczyloby pare;
+        //  requiresCorrectToolForDrops + #mineable/pickaxe + #needs_iron_tool -
+        //    mozna go przeniesc (awaryjne wyjscie w Arkanum wlasnie na tym polega),
+        //    ale nie goia reka.
+        ARCANE_EMBER = register("arcane_ember", props -> new ArcaneEmberBlock(props
+                .mapColor(MapColor.COLOR_PURPLE)
+                .strength(6.0f)
+                .explosionResistance(1200.0f)
+                .sound(SoundType.AMETHYST)
+                .requiresCorrectToolForDrops()
+                .pushReaction(PushReaction.BLOCK)
+                .lightLevel(state -> state.getValue(ArcaneEmberBlock.LIT) ? 15 : 4)
+                .emissiveRendering((state, getter, pos) -> state.getValue(ArcaneEmberBlock.LIT))));
     }
 
     /** Rejestruje blok i jego BlockItem pod tym samym id (sciezka = nazwa bloku). */

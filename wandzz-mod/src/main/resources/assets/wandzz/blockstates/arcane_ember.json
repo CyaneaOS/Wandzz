@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "wandzz:block/arcane_ember"
+    },
+    "lit=true": {
+      "model": "wandzz:block/arcane_ember_lit"
+    }
+  }
+}

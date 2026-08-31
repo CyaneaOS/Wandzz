@@ -50,12 +50,15 @@ public final class ModItemGroups {
                     for (WandWood wood : WandWood.values()) {
                         output.accept(ModItems.stick(wood));
                     }
-                    // 4. Bloki arkanum: drewno, sadzonka, liscie i stol.
+                    // 4. Ksiega zaklec (podrecznik gestow, zero progresji).
+                    output.accept(ModItems.SPELL_BOOK);
+                    // 5. Bloki arkanum: drewno, sadzonka, liscie, stol i zar.
                     output.accept(ModBlocks.ARCANE_LOG.asItem());
                     output.accept(ModBlocks.ARCANE_PLANKS.asItem());
                     output.accept(ModBlocks.ARCANE_LEAVES.asItem());
                     output.accept(ModBlocks.ARCANE_SAPLING.asItem());
                     output.accept(ModBlocks.ARCANE_TABLE.asItem());
+                    output.accept(ModBlocks.ARCANE_EMBER.asItem());
                 })
                 .build());
     }

@@ -9,6 +9,7 @@ import com.wandzz.mana.ManaAttachments;
 import com.wandzz.network.CastingHandler;
 import com.wandzz.network.WandzzNetwork;
 import com.wandzz.spell.Spells;
+import com.wandzz.world.ModWorldgen;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ public class Wandzz implements ModInitializer {
         ModItems.bootstrap();
         ModItemGroups.bootstrap(); // zakladka kreatywna - po rejestracji przedmiotow
         Spells.bootstrap();
+        ModWorldgen.bootstrap(); // wtrysniecie zaru lawy do biomesow (musi byc po blokach)
         ManaAttachments.bootstrap();
         CastingHandler.register();
         WandzzNetwork.register();  // typy pakietow many/stolika musza byc znane obu stronom

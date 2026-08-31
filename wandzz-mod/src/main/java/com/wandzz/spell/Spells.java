@@ -27,5 +27,8 @@ public final class Spells {
         SpellRegistry.register(new TeleportSpell(), GestureTemplates.zigzag());
         SpellRegistry.register(new BombSpell(), GestureTemplates.letterX());
         SpellRegistry.register(new DragonBreathSpell(), GestureTemplates.dragonSpiral(48));
+
+        // Arcane / lvl 3 - nie atak, tylko "przejscie": zapala Arkanny Zar.
+        SpellRegistry.register(new OpenGateSpell(), GestureTemplates.gateStroke());
     }
 }

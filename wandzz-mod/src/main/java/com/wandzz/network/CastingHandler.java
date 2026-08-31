@@ -77,6 +77,12 @@ public final class CastingHandler {
             return;
         }
 
+        // Cel/warunki musza byc sprawdzone PRZED platnoscia za mane - inaczej
+        // samo celowanie "w nic" kosztowaloby 40 many (patrz OpenGateSpell).
+        if (!spell.canCast(level, player)) {
+            return;
+        }
+
         ManaComponent mana = player.getAttachedOrCreate(ManaAttachments.MANA);
         if (!mana.has(spell.manaCost())) {
             tell(player, "wandzz.spell.not_enough_mana",
