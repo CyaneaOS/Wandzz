@@ -2,12 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "pattern": [
-    "  P",
+    "  S",
     " S ",
-    "P  "
+    "S  "
   ],
   "key": {
-    "P": "minecraft:birch_planks",
     "S": "wandzz:birch_stick"
   },
   "result": {

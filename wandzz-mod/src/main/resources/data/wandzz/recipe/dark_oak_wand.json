@@ -2,12 +2,11 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "pattern": [
-    "  P",
+    "  S",
     " S ",
-    "P  "
+    "S  "
   ],
   "key": {
-    "P": "minecraft:dark_oak_planks",
     "S": "wandzz:dark_oak_stick"
   },
   "result": {
