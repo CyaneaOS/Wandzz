@@ -162,6 +162,112 @@ na pol godziny. Dwie nagrody, obie odczuwalne w tej samej sekundzie:
   bar, a HUD dokleja ` - zgranie II` do etykiety paska many.
 - Trzecia linia tooltipa `wandzz:arcane_resin` tlumaczy zasade w grze, bez
   czytania README.
+## Rdzenie, jednorożec, feniks, Chronos i magiczna różdżka
+
+Runda, w której wszystkie rdzenie mają wreszcie **źródło**, a nie tylko przepis.
+
+### Skąd się bierze każdy rdzeń
+
+| rdzeń | poziom | źródło |
+|---|---|---|
+| `core_feather` | 1 | crafting: **8 piór + włos jednorożca** (`FFF/FUF/FFF`) |
+| `core_earth`, `core_water`, `core_nature`, `core_iron` | 1 | crafting (jak dotąd) |
+| `core_flame`, `core_frost`, `core_storm`, `core_shadow`, `core_light` | 2 | crafting (jak dotąd) |
+| `core_phoenix` | 3 | **4 pióra feniksa + pręt blaze'a** (`F F / R / F F`) |
+| `core_echo` | 2 | **tylko drop z Wardena** (nadpisany loot `data/minecraft/loot_table/entities/warden.json`) |
+| `core_dragon_breath`, `core_void`, `core_ender` | 3 | crafting (jak dotąd) |
+| `core_chronos` | 4 | **tylko boss Chronos na ołtarzu w Arkanum** (przepis usunięty) |
+
+`core_echo` jest szesnastym rdzeniem: `CoreType.ECHO(2, "core_echo", 1.0)`. Poziom 2
+oznacza, że automatycznie udostępnia wszystkie czary lvl ≤ 2 (patrz
+`Spell#isProvidedBy`) - nowy rdzeń nie potrzebuje własnego czaru, żeby był czegokolien wart.
+
+### Jednorożec i wiązanka leśna (`wandzz:unicorn_glade`)
+
+`GladeFeature` maluje plamę mchu z kwiatami (tulipany, stokrotki, dzwoneczki, piwonie) i
+wpuszcza 1-2 jednorożce. Feature jest wtryskiwany do biomów nadziemnych przez
+`BiomeModifications.addFeature(..., VEGETAL_DECORATION, ...)` z `rarity_filter: 48`.
+
+**Dlaczego feature, a nie nowy biom?** Nadziemny `BiomeSource` jest wieloszumowy i jego
+lista biomów nie jest ani datapackiem, ani API Fabricu. `BiomeModifications` potrafi do
+biomu *dokładać* (features, carvery, spawny), ale nie potrafi *włożyć* nowego biomu w
+overworld - to teren mixinów albo osobnego wymiaru. Wiązanka daje to, czego gracz szuka:
+pewien, rzadki, widoczny z daleka kawałek świata, w którym jednorożce są i tylko tam.
+
+Strzyżenie: PPM nożycami w jednorożca → 1-2 włosa, odrost po 5 minutach
+(`Unicorn.HAIR_REGROW_TICKS`). Skubanie, nie rzeź, bo włos ma być źródłem **odnawialnym** -
+rdzeń za zwłokę karałby gracza za słuszną decyzję. API: `Shearable#shear(ServerLevel,
+SoundSource, ItemStack)` + `readyForShearing()`, wynik `InteractionResult.SUCCESS_SERVER`.
+
+### Feniks (`wandzz:phoenix`)
+
+Siada **na wierzchołku korony** drzewa arkanu (duch wisi *pod* koroną - dwie sylwetki na
+jednym drzewie czytają się bez błędu). 3,5% szansy na drzewo, dedupe w promieniu korony.
+`fireImmune()` na `EntityType.Builder` - w 1.21.11 to flaga rejestru encji, a nie nadpisanie
+`hurt`, więc feniks nie spala siebie i nie tonie w lawie. Śmiertelne uderzenie podpala
+sprawcę (`die(DamageSource)` + `setSecondsOnFire(4)`) i sypie `SOUL_FIRE_FLAME`.
+
+### Chronos - boss ołtarza w Arkanum (`wandzz:chronos_boss`)
+
+`ChronosAltarFeature` stawia 9×9 podest z obsydianu, cztery filary z płaczącego obsydianu
+z amethystem na szczycie, żar arkanu w środku i **spawnowi bossa** (120 HP, pancerz 8,
+odporność na odrzut). Ołtarz siedzi w `features[4]` (surface_structures) naszego biomu
+`wandzz:arcane_forest`, bo jedyne, co `BiomeModifications` nie dotknie, to własny, `fixed`
+biom - a Arkanum właśnie taki ma.
+
+Pasek życia: `ServerBossEvent` trzymany w encji plus `startSeenByPlayer`/`stopSeenByPlayer`
+- dokładnie jak `WitherBoss`, bo w 1.21.11 nie ma żadnej "flagi bossa" przy `EntityType`.
+
+**Dlaczego feature, a nie `worldgen/structure` z `/locate`?** `structure_set` +
+`template_pool` wymagają szablonu `.nbt`, a to plik binarny: nie da się go uczciwie
+zrecenzować w gicie ani poprawić, gdy zmienią się bloki. Jeśli chcesz prawdziwą
+strukturę z `/locate`, to jest osobny krok - dorzucimy wtedy `jigsaw` + `template_pool`.
+
+### Magiczna różdżka = trzy patyki na skos, ale z poświęconego pnia
+
+Rezygnacja z żywicy w przepisach (mechanika żywicy zostaje: okorowywanie, +1 slot,
+×1,2 regeneracji, szybki zapłon):
+
+1. PPM toporkiem w `wandzz:arcane_log`, **gdy w koronie wisi duch** → blok zmienia się w
+   `wandzz:arcane_log_blessed` (światło 1 - znak w koronie, że drzewo jest zajęte);
+   bez ducha → `arcane_log_stripped`, jak dotąd.
+2. `arcane_log_blessed` → 4 × `wandzz:arcane_blessed_stick` (shapeless).
+3. `wandzz:arcane_wand_magic` = **3 poświęcone patyki na skos** (`"  S"," S ","S  "`) -
+   dokładnie ten sam kształt co zwykła różdżka, więc "tak samo jak zwykle" jest prawdziwe.
+
+Pozostałe 12 gatunków drewna nadal robi różdżkę magiczną z różdżki zwykłej + 2 pył
+światła: tylko drzewa arkanu goszczą duchy, więc tylko one mają poświecone drewno.
+
+Żeby pętla się nie wyczerpała, `SpriteRespawner` (wpinka w `END_SERVER_TICK`, co 20 s,
+kolumna 25×25×19 wokół gracza) **zwraca ducha na drzewo**, na którym go zabrakło:
+wierzchołek pnia → korona → czy wisi? nie → 10% szansy, że nowy siada na krawędzi. Bez
+tego cała ścieżka "poświęcone patyki → magiczna różdżka" wysycha po pierwszym wyciu
+drzewa, a mapa drzew w `SavedData` jest w tym projekcie zabroniona (wymagałaby
+domkniętego `DataFixTypes`), więc skan jest celowo bezstanowy.
+
+### Dwa nowe czary (jest ich 10)
+
+| czar | id | koszt | gest | kto udostępnia |
+|---|---|---|---|---|
+| Leczenie | `heal` | 14 | dwa łuki w serce | `LIGHT`, `NATURE` i każdy rdzeń lvl ≥ 3 |
+| Skok | `leap` | 6 | „V" z długim ogonem w górę | każdy rdzeń lvl ≥ 1 |
+
+`heal` celowo nie podnosi zdrowia wprost (`setHealth`) tylko dokłada `REGENERATION` +
+`ABSORPTION`: bezpośrednie wystawienie HP omija tarcze, jedzenie i efekty. `canCast`
+odmawia, gdy pasek jest pełny i tarczy brak - żeby nie płacić 14 many za czar, który nic
+nie robi. `leap` zeruje `fallDistance` (`resetFallDistance()`), bo kara za lot byłaby
+dziwną ceną za ratunek.
+
+### Co jeszcze nie jest zrobione (żeby nie szukać po omacku)
+
+* Prawdziwy **nowy biom** w overworldzie (mieszanka szumów / mixin) - patrz wyżej.
+* **Jaja spawnu** jednorożca/feniksa/Chronosa: w 1.21.11 `SpawnEggItem` jest sterowany
+  danymi (`DataComponents.SPAWN_EGG`) i wymaga `ResourceKey<Item>` w Properties; da się,
+  ale to osobny krok. Na razie `/summon wandzz:unicorn`.
+* Naturalne spawny (reguły `SpawnPlacements`) - teraz moby przychodzą wyłącznie z
+  feature'ów, więc nie znikną z świata i nie zaśmiecają nocy.
+* Osobne modele/tekstury dla każdej encji: trzy moby dzielą `FluffModel` (32×32, dwie
+  skale), bo tekstury robisz sam.
 
 ## Jak to działa w grze
 

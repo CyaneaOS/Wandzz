@@ -2,11 +2,10 @@
   "type": "minecraft:crafting_shapeless",
   "category": "equipment",
   "ingredients": [
-    "minecraft:amethyst_shard",
-    "minecraft:clock"
+    "wandzz:arcane_log_blessed"
   ],
   "result": {
-    "count": 1,
-    "id": "wandzz:core_chronos"
+    "count": 4,
+    "id": "wandzz:arcane_blessed_stick"
   }
 }

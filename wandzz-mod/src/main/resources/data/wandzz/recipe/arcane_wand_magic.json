@@ -1,11 +1,14 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "ingredients": [
-    "wandzz:arcane_wand",
-    "minecraft:glowstone_dust",
-    "minecraft:glowstone_dust"
+  "pattern": [
+    "  S",
+    " S ",
+    "S  "
   ],
+  "key": {
+    "S": "wandzz:arcane_blessed_stick"
+  },
   "result": {
     "count": 1,
     "id": "wandzz:arcane_wand_magic"

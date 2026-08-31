@@ -30,5 +30,11 @@ public final class Spells {
 
         // Arcane / lvl 3 - nie atak, tylko "przejscie": zapala Arkanny Zar.
         SpellRegistry.register(new OpenGateSpell(), GestureTemplates.gateStroke());
+
+        // Rdzen echa (lvl 2, z Wardena) + skok: tanie, przydatne, widoczne.
+        // Oba sa w podreczniku gestow automatycznie - lista jest budowana z
+        // SpellRegistry, wiec nic tu wiecej nie trzeba dokladac.
+        SpellRegistry.register(new HealSpell(), GestureTemplates.healStroke());
+        SpellRegistry.register(new LeapSpell(), GestureTemplates.leapStroke());
     }
 }

@@ -52,6 +52,9 @@ public final class ModItemGroups {
                     }
                     // 3b. Zywica arkanu - nasaca rozdzke (drop ducha arkanu).
                     output.accept(ModItems.ARCANE_RESIN);
+                    output.accept(ModItems.UNICORN_HAIR);
+                    output.accept(ModItems.PHOENIX_FEATHER);
+                    output.accept(ModItems.ARCANE_BLESSED_STICK);
                     // 4. Ksiega zaklec (podrecznik gestow, zero progresji).
                     output.accept(ModItems.SPELL_BOOK);
                     // 5. Bloki arkanum: drewno, sadzonka, liscie, stol i zar.

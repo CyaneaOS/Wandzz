@@ -45,6 +45,26 @@ public final class ModWorldgen {
             ResourceKey.create(Registries.FEATURE, id("arcane_strangler")),
             new ArcaneStranglerFeature(NoneFeatureConfiguration.CODEC));
 
+    /** Glada jednorozcow (overworld) i oltarz Chronosa (Arkanum). */
+    public static final Feature<?> UNICORN_GLADE = Registry.register(
+            BuiltInRegistries.FEATURE,
+            ResourceKey.create(Registries.FEATURE, id("unicorn_glade")),
+            new GladeFeature(NoneFeatureConfiguration.CODEC));
+
+    public static final Feature<?> CHRONOS_ALTAR = Registry.register(
+            BuiltInRegistries.FEATURE,
+            ResourceKey.create(Registries.FEATURE, id("chronos_altar")),
+            new ChronosAltarFeature(NoneFeatureConfiguration.CODEC));
+
+    /**
+     * Klucz umieszczania glady. Trafia do biomonow nadziemnych przez
+     * {@link BiomeModifications#addFeature} ponizej; oltarz NIE - on siedzi w
+     * {@code data/wandzz/worldgen/biome/arcane_forest.json}, bo Arkanum ma wlasny,
+     * `fixed` biome i addFeature by go nie dotknal.
+     */
+    public static final ResourceKey<PlacedFeature> UNICORN_GLADE_PLACED = ResourceKey.create(
+            Registries.PLACED_FEATURE, id("unicorn_glade"));
+
     /** `wandzz:arcane_tree` w rejestrze `worldgen/configured_feature`. */
     public static final ResourceKey<ConfiguredFeature<?, ?>> ARCANE_TREE = ResourceKey.create(
             Registries.CONFIGURED_FEATURE, id("arcane_tree"));
@@ -90,6 +110,11 @@ public final class ModWorldgen {
     public static void bootstrap() {
         BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(),
                 GenerationStep.Decoration.UNDERGROUND_ORES, ARCANE_EMBER_VEIN);
+
+        // WEGETAL_DECORATION, nie UNDERGROUND_ORES: glada to cos na powierzchni i
+        // musi isc PO terenie, inaczej kwiaty roslyby w powietrzu nad urwiskiem.
+        BiomeModifications.addFeature(BiomeSelectors.foundInOverworld(),
+                GenerationStep.Decoration.VEGETAL_DECORATION, UNICORN_GLADE_PLACED);
         Wandzz.LOGGER.info("Wandzz: arcane_ember wtrysniety do biomesow nadziemnych (UNDERGROUND_ORES)");
         // ARCANE_STRANGLER zarejestrowal sie przy ladowaniu tej klasy; logujemy
         // klucz, bo to on decyduje, czy configured_feature/arcane_tree.json w ogole

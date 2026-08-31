@@ -11,6 +11,7 @@ import com.wandzz.network.CastingHandler;
 import com.wandzz.network.WandzzNetwork;
 import com.wandzz.spell.Spells;
 import com.wandzz.world.ModWorldgen;
+import com.wandzz.world.SpriteRespawner;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import org.slf4j.Logger;
@@ -45,8 +46,12 @@ public class Wandzz implements ModInitializer {
         WandInteractions.register(); // PPM rdzeniem = zwrot rdzenia z rozdzki
 
         // Regeneracja many wszystkich graczy co tick serwera.
-        ServerTickEvents.END_SERVER_TICK.register(server ->
-                server.getPlayerList().getPlayers()
-                        .forEach(CastingHandler::tickManaRegen));
+        ServerTickEvents.END_SERVER_TICK.register(server -> {
+            server.getPlayerList().getPlayers()
+                    .forEach(CastingHandler::tickManaRegen);
+            // Magiczne drzewa musza odzyskiwac ducha, inaczej sciezka "swiecone
+            // patyki -> magiczna rozdzka" wysycha po pierwszym wyciu drzewa.
+            SpriteRespawner.tick(server);
+        });
     }
 }

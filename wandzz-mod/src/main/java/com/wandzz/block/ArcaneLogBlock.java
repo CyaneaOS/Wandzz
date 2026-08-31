@@ -72,8 +72,11 @@ public class ArcaneLogBlock extends RotatedPillarBlock {
         final boolean withSpirit = hasSpiritsPerchedNearby(level, pos);
         final boolean yields = withSpirit || level.getRandom().nextFloat() < RESIN_CHANCE;
 
-        level.setBlockAndUpdate(pos, ModBlocks.ARCANE_LOG_STRIPPED.defaultBlockState()
-                .setValue(AXIS, state.getValue(AXIS)));
+        // Duch w koronie nie tylko gwarantuje zywice - on SAM poswieca pien:
+        // blok zamienia sie w arcane_log_blessed, a ten tnie sie na swiatebne
+        // patyki (3 na skos = magiczna rozdzka). Bez ducha jak dotad: stripped.
+        final var blessed = withSpirit ? ModBlocks.ARCANE_LOG_BLESSED : ModBlocks.ARCANE_LOG_STRIPPED;
+        level.setBlockAndUpdate(pos, blessed.defaultBlockState().setValue(AXIS, state.getValue(AXIS)));
 
         if (yields) {
             final int count = withSpirit && level.getRandom().nextFloat() < SECOND_DROP_CHANCE ? 2 : 1;

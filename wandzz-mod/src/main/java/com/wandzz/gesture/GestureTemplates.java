@@ -115,4 +115,36 @@ public final class GestureTemplates {
         }
         return pts;
     }
+    /**
+     * Leczenie: dwa gorne luki spotykajace sie w dol - "serce" narysowane
+     * jednim kresem. Ksztaot celowo NIE jest kola: kolo zamyka sie samo, a $1
+     * traktuje domkniety ksztalt jak petytle i zaczyna go dopasowywac od
+     * srodka, co przy dwoch lukach dawaloby losowe trafienia.
+     */
+    public static List<Point> healStroke() {
+        List<Point> pts = new ArrayList<>();
+        for (int i = 0; i <= 24; i++) {
+            double t = Math.PI * i / 24.0;
+            pts.add(new Point(-50.0 + 50.0 * Math.cos(t), -40.0 + 35.0 * Math.sin(t)));
+        }
+        for (int i = 0; i <= 24; i++) {
+            double t = Math.PI - Math.PI * i / 24.0;
+            pts.add(new Point(50.0 - 50.0 * Math.cos(t), -40.0 + 35.0 * Math.sin(t)));
+        }
+        pts.add(new Point(0, 45.0));
+        return pts;
+    }
+
+    /**
+     * Skok: "V" z dlugim ogonem w gore - rysuje sie jak zamach reka w sul.
+     * Trzy punkty, dwoch ostrych katow; przy 0.72 progu nie da sie tego pomylic
+     * z zygzakiem (blyskawica) ani z bomba (X), bo tam sa cztery i piec rameion.
+     */
+    public static List<Point> leapStroke() {
+        return List.of(
+                new Point(-90, -70),
+                new Point(-20, 60),
+                new Point(70, -90)
+        );
+    }
 }

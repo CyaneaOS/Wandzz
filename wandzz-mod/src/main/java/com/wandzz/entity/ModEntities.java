@@ -44,9 +44,56 @@ public final class ModEntities {
                     .updateInterval(3)
                     .build(ARCANE_SPRITE_KEY));
 
+    // --- Jednorozec, feniks, Chronos (runda 15) ---------------------------------
+    // Wszystkie trzy to CREATURE/MONSTER z removeWhenFarAway()=false: mob, ktory
+    // znika, kiedy gracz wraca po miecz, jest gorszy niz mob, ktory czeka.
+
+    public static final ResourceKey<EntityType<?>> UNICORN_KEY = ResourceKey.create(
+            Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, "unicorn"));
+
+    public static final ResourceKey<EntityType<?>> PHOENIX_KEY = ResourceKey.create(
+            Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, "phoenix"));
+
+    public static final ResourceKey<EntityType<?>> CHRONOS_BOSS_KEY = ResourceKey.create(
+            Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, "chronos_boss"));
+
+    public static final EntityType<Unicorn> UNICORN = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE, UNICORN_KEY,
+            EntityType.Builder.of(Unicorn::new, MobCategory.CREATURE)
+                    .sized(1.0F, 1.1F)
+                    .eyeHeight(0.9F)
+                    .clientTrackingRange(8)
+                    .updateInterval(3)
+                    .build(UNICORN_KEY));
+
+    public static final EntityType<Phoenix> PHOENIX = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE, PHOENIX_KEY,
+            EntityType.Builder.of(Phoenix::new, MobCategory.CREATURE)
+                    // fireImmune() to jedyna poprawna droga do "feniks nie boi sie
+                    // wlasnego plomienia": w 1.21.11 to flaga rejestru encji, a nie
+                    // nadpisanie w hurt()
+                    .fireImmune()
+                    .sized(0.9F, 1.0F)
+                    .eyeHeight(0.8F)
+                    .clientTrackingRange(8)
+                    .updateInterval(3)
+                    .build(PHOENIX_KEY));
+
+    public static final EntityType<ChronosBoss> CHRONOS_BOSS = Registry.register(
+            BuiltInRegistries.ENTITY_TYPE, CHRONOS_BOSS_KEY,
+            EntityType.Builder.of(ChronosBoss::new, MobCategory.MONSTER)
+                    .sized(1.6F, 2.2F)
+                    .eyeHeight(1.8F)
+                    .clientTrackingRange(10)
+                    .updateInterval(2)
+                    .build(CHRONOS_BOSS_KEY));
+
     /** Wolane z common entrypointu, przed pierwszym wejsciem na swiat. */
     public static void bootstrap() {
         FabricDefaultAttributeRegistry.register(ARCANE_SPRITE, ArcaneSprite.createAttributes());
+        FabricDefaultAttributeRegistry.register(UNICORN, Unicorn.createAttributes());
+        FabricDefaultAttributeRegistry.register(PHOENIX, Phoenix.createAttributes());
+        FabricDefaultAttributeRegistry.register(CHRONOS_BOSS, ChronosBoss.createAttributes());
     }
 
     private ModEntities() {

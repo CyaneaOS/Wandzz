@@ -40,6 +40,15 @@ public final class ModItems {
      * patrz {@link com.wandzz.wand.WandData#withResin()}.
      */
     public static Item ARCANE_RESIN;
+    /** Wlos jednorozca - drugi skladnik {@code core_feather} (8 pior + on). */
+    public static Item UNICORN_HAIR;
+    /** Pioro feniksa - surowiec na {@code core_phoenix}. */
+    public static Item PHOENIX_FEATHER;
+    /**
+     * Patyk poswiecony: ciany z poswieconego pnia (ten, na ktorym wisi duch).
+     * Trzy na skos = magiczna rozdzka arkanska, czyli "tak samo jak zwykle".
+     */
+    public static Item ARCANE_BLESSED_STICK;
 
     public static Item stick(WandWood wood) {
         Item stick = STICKS.get(wood);
@@ -71,6 +80,20 @@ public final class ModItems {
         ResourceKey<Item> resinKey = itemKey("arcane_resin");
         ARCANE_RESIN = new ArcaneResinItem(new Item.Properties().stacksTo(16).setId(resinKey));
         Registry.register(BuiltInRegistries.ITEM, resinKey, ARCANE_RESIN);
+
+        // Trzy surowce bez zachowania - tylko stacki i model. Rejestrowane tak samo
+        // jak zywica: ResourceKey WCONANY w Properties (od 1.21.2 inaczej sie nie da).
+        ResourceKey<Item> hairKey = itemKey("unicorn_hair");
+        UNICORN_HAIR = new Item(new Item.Properties().stacksTo(64).setId(hairKey));
+        Registry.register(BuiltInRegistries.ITEM, hairKey, UNICORN_HAIR);
+
+        ResourceKey<Item> featherKey = itemKey("phoenix_feather");
+        PHOENIX_FEATHER = new Item(new Item.Properties().stacksTo(64).setId(featherKey));
+        Registry.register(BuiltInRegistries.ITEM, featherKey, PHOENIX_FEATHER);
+
+        ResourceKey<Item> blessedKey = itemKey("arcane_blessed_stick");
+        ARCANE_BLESSED_STICK = new Item(new Item.Properties().stacksTo(64).setId(blessedKey));
+        Registry.register(BuiltInRegistries.ITEM, blessedKey, ARCANE_BLESSED_STICK);
 
         ResourceKey<Item> bookKey = itemKey("spell_book");
         SPELL_BOOK = new SpellBookItem(new Item.Properties().stacksTo(1).setId(bookKey));

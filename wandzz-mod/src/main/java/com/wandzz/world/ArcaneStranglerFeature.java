@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.wandzz.block.ModBlocks;
 import com.wandzz.entity.ArcaneSprite;
 import com.wandzz.entity.ModEntities;
+import com.wandzz.entity.Phoenix;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -76,6 +77,14 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
      */
     private static final double SPRITE_CHANCE = 0.09;
 
+    /**
+     * Szansa, ze na krawedzi tej samej korony siada feniks. Nizsza niz
+     * SPRITE_CHANCE i od niej niezalezna: feniks jest zrodlem pior na rdzen
+     * poziomu 3, wiec ma byc rzadki, ale nie az rzadki, zebys czekal na nowe
+     * drzewo.
+     */
+    private static final double PHOENIX_CHANCE = 0.035;
+
     /** Zasieg szukania pnia gospodarza w dol, przez liscie. */
     private static final int HOST_LOOKDOWN = 24;
     /** Promien, w ktorym na danym pietrze szukamy pnia (korona bywa przesunieta). */
@@ -119,6 +128,12 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
         placeCanopy(level, random, new BlockPos(crownX, crownY, crownZ), rim);
         // kotwica duha = brzeg korony, nie srodek - patrz pickPerch
         maybeSpawnSprite(level, random,
+                pickPerch(level, random, rim, new BlockPos(crownX, crownY - 2, crownZ)));
+
+        // Feniks siada na TEJ SAMEJ koronie, ale na wierzchu (patrz
+        // maybeSpawnPhoenix): drzewo z duhem i ptakiem to drzewo, na ktorym jest
+        // wszystko, czego potrzeba do dwoch magicznych receptur.
+        maybeSpawnPhoenix(level, random,
                 pickPerch(level, random, rim, new BlockPos(crownX, crownY - 2, crownZ)));
         return true;
     }
@@ -282,6 +297,30 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
     // ------------------------------------------------------------------
     // Materialy i drobiazgi
     // ------------------------------------------------------------------
+
+    /**
+     * Gniazdo feniksa: ten sam mechanizm co przy duchu (dedupe w obrebie korony),
+     * tylko encja i szansa inne. Brak dedupe dawalby para feniksow na jednym
+     * drzewie i farme pior w jednym chunku.
+     */
+    private void maybeSpawnPhoenix(final WorldGenLevel level, final RandomSource random, final BlockPos perch) {
+        if (random.nextFloat() > PHOENIX_CHANCE) {
+            return;
+        }
+        final ServerLevel serverLevel = level.getLevel();
+        if (!serverLevel.getEntitiesOfClass(Phoenix.class, new AABB(perch).inflate(9.5, 10.0, 9.5)).isEmpty()) {
+            return;
+        }
+        final @Nullable Phoenix bird = ModEntities.PHOENIX.create(serverLevel, EntitySpawnReason.STRUCTURE);
+        if (bird == null) {
+            return;
+        }
+        // nad korona, nie pod nia: feniks siada na liscciach, a duch wisi pod
+        // nimi - te dwie sylwetki na tym samym drzewie czyta sie bez bledu
+        bird.snapTo(perch.getX() + 0.5, perch.getY() + 1.05, perch.getZ() + 0.5,
+                random.nextFloat() * 360.0F, 0.0F);
+        level.addFreshEntity(bird);
+    }
 
     private static boolean isLog(final BlockState state) {
         return state.is(ModBlocks.ARCANE_LOG);

@@ -49,6 +49,17 @@ public class WandzzClient implements ClientModInitializer {
         EntityRendererRegistry.register(ModEntities.ARCANE_SPRITE, ArcaneSpriteRenderer::new);
         ColorProviderRegistry.BLOCK.register(
                 (state, view, pos, tintIndex) -> ARCANE_LEAF_TINT, ModBlocks.ARCANE_LEAVES);
+
+        // Trojka nowych encji dzieli model (patrz FluffModel): dwe warstwy = dwe
+        // skale, bo 1.21.11 nie ma juz scaleModel w rendererze.
+        EntityModelLayerRegistry.registerModelLayer(FluffModel.LAYER, FluffModel::createBodyLayer);
+        EntityModelLayerRegistry.registerModelLayer(FluffModel.LAYER_BOSS, FluffModel::createBossBodyLayer);
+        EntityRendererRegistry.register(ModEntities.UNICORN,
+                ctx -> new FluffRenderer(ctx, FluffRendererTextures.UNICORN, FluffModel.LAYER));
+        EntityRendererRegistry.register(ModEntities.PHOENIX,
+                ctx -> new FluffRenderer(ctx, FluffRendererTextures.PHOENIX, FluffModel.LAYER));
+        EntityRendererRegistry.register(ModEntities.CHRONOS_BOSS,
+                ctx -> new FluffRenderer(ctx, FluffRendererTextures.CHRONOS, FluffModel.LAYER_BOSS));
         UseItemCallback.EVENT.register((player, world, hand) -> {
             // UseItemCallback#interact zwraca InteractionResult (nie InteractionResultHolder)
             if (!world.isClientSide()) {

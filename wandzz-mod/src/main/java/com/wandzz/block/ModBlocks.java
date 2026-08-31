@@ -37,6 +37,7 @@ public final class ModBlocks {
     public static RotatedPillarBlock ARCANE_LOG_STRIPPED;
     public static Block ARCANE_PLANKS;
     public static LeavesBlock ARCANE_LEAVES;
+    public static RotatedPillarBlock ARCANE_LOG_BLESSED;
     public static ArcaneSaplingBlock ARCANE_SAPLING;
     public static ArcaneTableBlock ARCANE_TABLE;
     public static ArcaneEmberBlock ARCANE_EMBER;
@@ -51,6 +52,13 @@ public final class ModBlocks {
                 props -> new ArcaneLogBlock(props.strength(2.0f, 2.0f)));
         ARCANE_LOG_STRIPPED = register("arcane_log_stripped",
                 props -> new RotatedPillarBlock(props.strength(2.0f, 2.0f)));
+
+        // Pien poswiecony: okorowany WTEDY, gdy w koronie wisi duch. Swieci
+        // (lightLevel 1) nie po to, zeby oswietlac - po to, zeby byl widoczny w
+        // koronie jako "to drzewo jest zajete", bo z niego tnie sie patyki na
+        // magiczna rozdzke.
+        ARCANE_LOG_BLESSED = register("arcane_log_blessed",
+                props -> new RotatedPillarBlock(props.strength(2.0f, 2.0f).lightLevel(state -> 1)));
         ARCANE_PLANKS = register("arcane_planks",
                 props -> new Block(props.strength(2.0f, 3.0f)));
 

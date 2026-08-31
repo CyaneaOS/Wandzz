@@ -1,7 +1,7 @@
 package com.wandzz.core;
 
 /**
- * 15 typow core'ow. Kazdy okresla przede wszystkim POZIOM i mozliwosci,
+ * 16 typow core'ow. Kazdy okresla przede wszystkim POZIOM i mozliwosci,
  * a niekoniecznie jedno konkretne zaklecie - np. Dragon Breath jako efekt
  * moze byc dostepny takze dla innych core'ow poziomu 3 (patrz
  * Spell#isProvidedBy w konkretnych implementacjach zaklec).
@@ -29,7 +29,14 @@ public enum CoreType {
     NATURE(1, "core_nature", 1.1),
     IRON(1, "core_iron", 1.0),
     ENDER(3, "core_ender", 0.85),
-    CHRONOS(4, "core_chronos", 0.75);
+    CHRONOS(4, "core_chronos", 0.75),
+
+    /**
+     * Rdzen echa: jedyny, ktorego NIE da sie wyrobic. Wypadanie z Wardena
+     * (@code data/minecraft/loot_table/entities/warden.json}) nie ma odpowiednika w
+     * recipes/, bo rzemiosio "amethyst + cos" odbieraloby sens wyjsciu na glow.
+     */
+    ECHO(2, "core_echo", 1.0);
 
     private final int level;
     private final String translationKey;

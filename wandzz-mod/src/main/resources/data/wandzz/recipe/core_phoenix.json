@@ -1,10 +1,15 @@
 {
-  "type": "minecraft:crafting_shapeless",
+  "type": "minecraft:crafting_shaped",
   "category": "equipment",
-  "ingredients": [
-    "minecraft:amethyst_shard",
-    "minecraft:blaze_rod"
+  "pattern": [
+    "F F",
+    " R ",
+    "F F"
   ],
+  "key": {
+    "F": "wandzz:phoenix_feather",
+    "R": "minecraft:blaze_rod"
+  },
   "result": {
     "count": 1,
     "id": "wandzz:core_phoenix"
