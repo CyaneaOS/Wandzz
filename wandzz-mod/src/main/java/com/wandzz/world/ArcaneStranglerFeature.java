@@ -255,7 +255,8 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
     private static @Nullable BlockPos findHostTrunk(final WorldGenLevel level, final BlockPos origin) {
         BlockPos cursor = origin.below();
         for (int i = 0; i < HOST_LOOKDOWN; i++) {
-            if (cursor.getY() <= level.getMinBuildHeight() + 1) {
+            // 1.21.11: LevelHeightAccessor ma getMinY() (nie getMinBuildHeight())
+            if (cursor.getY() <= level.getMinY() + 1) {
                 return null;
             }
             for (int dx = -HOST_SCAN_RADIUS; dx <= HOST_SCAN_RADIUS; dx++) {

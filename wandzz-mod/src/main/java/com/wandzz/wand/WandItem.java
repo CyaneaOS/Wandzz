@@ -124,9 +124,12 @@ public class WandItem extends Item {
      * wiecej rdzeni, niz rozdzka uniesie.
      */
     public static boolean setLoadout(ItemStack wandStack, List<CoreType> cores) {
-        int capacity = capacity(wandStack);
-        List<CoreType> fitted = new ArrayList<>(cores.subList(0, Math.min(capacity, cores.size())));
-        wandStack.set(ModComponents.WAND_DATA, new WandData(List.copyOf(fitted), data.resinated()));
+        // stan czytamy w calosci: nadpisanie skladow bez `resinated` zdjeloby
+        // nalozony wczesniej laczny bonus (+1 gniazdo, x1.2 regenu, PPM na ember)
+        WandData current = getData(wandStack);
+        int slots = capacity(wandStack);
+        List<CoreType> fitted = new ArrayList<>(cores.subList(0, Math.min(slots, cores.size())));
+        wandStack.set(ModComponents.WAND_DATA, new WandData(List.copyOf(fitted), current.resinated()));
         return true;
     }
 
