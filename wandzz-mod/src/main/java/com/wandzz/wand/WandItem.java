@@ -45,6 +45,27 @@ public class WandItem extends Item {
         return magic;
     }
 
+    /**
+     * Poswiata zaklec na magicznych rozdzkach - ROZWIAZANIE TYMCZASOWE.
+     *
+     * Magiczne warianty nie maja jeszcze wlasnej grafiki: ich model wskazuje
+     * te sama teksture co wariant zwyczajny (wandzz:item/<drewno>_wand), wiec
+     * bez tego nadpisania obie rozdzki bylyby nie do rozroznienia. Vanilla
+     * 1.21.11 pyta o to w ItemStack#hasFoil(): najpierw patrzy na komponent
+     * minecraft:enchantment_glint_override, potem na Item#isFoil(ItemStack)
+     * (domylnie: stack.isEnchanted()), a BlockModelWrapper doklada warstwe
+     * "foil" w ekwipunku, rece i na ziemi - czyli jeden override obsluguje
+     * wszystkie widoki: bez kodu klienckiego i bez dokladania komponentu do
+     * kazdego stacka.
+     *
+     * Kiedy bedzie wlasna grafika (<drewno>_wand_magic.png), trzeba tylko
+     * przestawic warstwe w modelu na nia, a ten nadpis usunac.
+     */
+    @Override
+    public boolean isFoil(ItemStack stack) {
+        return magic || super.isFoil(stack);
+    }
+
     /** Liczba gniazd na rdzenie dana rozdzka (1 bazowe + dodatki z drewna). */
     public int coreCapacity() {
         return wood.totalSlots(magic);

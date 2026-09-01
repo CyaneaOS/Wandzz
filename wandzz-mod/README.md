@@ -697,7 +697,7 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 - `wandzz:arcane_resin` ma własną klasę (`ArcaneResinItem`) tylko po to, żeby
   tooltip tłumaczył mechanikę w grze (dwie linie, oba klucze użyte — kontrolka
   wywala martwe klucze lang).
-- Placeholdery tekstur (`assets/wandzz/textures/{block,item,entity}`, 24 PNG) są
+- Placeholdery tekstur (`assets/wandzz/textures/{block,item,entity}`, 37 PNG: 27 `item` + 6 `block` + 4 `entity`) są
   po to, żeby kształt było widać w grze i żeby brak Twojej grafiki nie dawał
   fioletowej kostki. Liście są szare celowo: mnoży je tint z
   `ColorProviderRegistry.BLOCK` w `WandzzClient` — chcesz malować fiolet
@@ -749,15 +749,46 @@ odfiltrowania wierszy**.
 
 | slot (plik, ktory nadpisujesz) | co to jest | czyj |
 |---|---|---|
-| `textures/item/oak_stick.png` … `pale_oak_stick.png` (10 sztuk: `oak`, `spruce`, `birch`, `jungle`, `acacia`, `dark_oak`, `crimson`, `warped`, `cherry`, `pale_oak`) | patyki do recipes | **Twoje, w repo** (16×16 RGBA, rampa trzech kolorów) |
-| `textures/item/mangrove_stick.png`, `arcane_stick.png`, `arcane_blessed_stick.png` | mangrowiec + drewno duchów (Święty patyk wygląda identycznie jak zwykły, dopóki nie ma swojej tekstury) | placeholder do namalowania |
+| `textures/item/*_stick.png` (11 sztuk: `oak`, `spruce`, `birch`, `jungle`, `acacia`, `dark_oak`, `crimson`, `warped`, `cherry`, `pale_oak`, `mangrove`) | patyki do receptur | **Twoje, w repo** (16×16 RGBA, 37 pikseli, rampa trzech kolorów) |
+| `textures/item/arcane_stick.png`, `arcane_blessed_stick.png` | drewno duchów („Święty patyk” wygląda identycznie jak zwyczajny, dopóki nie ma swojej tekstury) | placeholder do namalowania |
 | `textures/item/arcane_resin.png` | żywica (przedmiot czysto opisowy) | placeholder |
 | `textures/block/arcane_log{,_stripped,_blessed,_top}.png`, `arcane_leaves.png`, `arcane_sapling.png` | kłoda, okorowana, poświęcona, góra pnia, liście (tint!), sadzonka | placeholder |
 | `textures/entity/{unicorn,phoenix,chronos_boss,arcane_sprite}.png` | encje | placeholder, **32×32** |
-| 13 × `*_wand.json` i 13 × `*_wand_magic.json` | rózdzki | vanilla `blaze_rod` / `breeze_rod` — slotów własnych jeszcze nie ma |
+| `textures/item/*_wand.png` (10 sztuk, te same gatunki co patyki) | różdzki zwykłe | **Twoje, w repo** |
+| `textures/item/spruce_wand.png`, `bamboo_wand.png`, `arcane_wand.png` | jodła, bambus i arcane — 3 różdzki bez grafiki | placeholder do namalowania |
+| 13 × `*_wand_magic.json` | różdzki magiczne | **świadomie bez własnej tekstury** — patrz akapit nizej |
+
+**Różdzki magiczne: na razie bez własnej grafiki, z poświatą zaklęć (tymczasowo).**
+Modele `*_wand_magic.json` wskazują **tę samą** teksturę co zwyczajny wariant
+gatunku (`wandzz:item/<drewno>_wand`), a `WandItem#isFoil(ItemStack)` zwraca
+`true`, gdy flaga `magic` jest ustawiona. Vanilla 1.21.11 decyduje o poświacie w
+`ItemStack#hasFoil()`: najpierw patrzy na komponent
+`minecraft:enchantment_glint_override`, a dopiero gdy go nie ma — na
+`Item#isFoil(ItemStack)` (domyślnie `stack.isEnchanted()`); `BlockModelWrapper`
+dokłada wtedy warstwę „foil”. Dlatego jedno nadpisanie metody działa w
+ekwipunku, w ręce i na ziemi naraz, bez kodu klienckiego.
+
+Wybrałem nadpisanie zamiast komponentu, choć **obie drogi działają** (komponent
+w `Item.Properties` też dosięga stacków leżących w świecie od dawna, bo
+`PatchedDataComponentMap#get` dla brakującego klucza zagląda do
+`item.components()` — sprawdziłem w source 1.21.11). Powody są praktyczne:
+na stacku nie przybywa żadnego zapisywanego/synchronizowanego pola, więc nie wchodzi
+w drogę naszym ścieżkom przebudowującym komponenty (`setLoadout`, `withResin`,
+naprawa), a definicja zostaje obok flagi `magic` — nie ma jak się rozjechać.
+Vanilla używa komponentu tam, gdzie poświata jest cechą *konkretnego* stacka lub
+przedmiotu bez klasy (`enchanted_golden_apple`, `written_book`, `experience_bottle`).
+`magic || super.isFoil(stack)` zachowuje przy tym normalną semantykę: zwyczajna
+różdzka z realnym zaklęciem i tak zaświeci.
+
+Kiedy będziesz miał własne `*_wand_magic.png`: kładziesz je do `textures/item/`,
+w `<drewno>_wand_magic.json` zmieniasz `layer0` na
+`wandzz:item/<drewno>_wand_magic` i — jeśli poświata ma zniknąć — usuwasz
+nadpisanie `isFoil`. Trzy różdzki bez grafiki (`spruce_wand`, `bamboo_wand`,
+`arcane_wand`) wskazują placeholder w tym samym schemacie, więc im wystarczy
+nadpisać plik.
 
 Format, którego trzymaj się przy eksporcie (to rzeczy, które realnie potrafią
-dać fioletową kostkę albo czarny tuf): kwadrat **16×16** dla przedmiotów i bloków,
+dać fioletową kostkę albo czarny piksel): kwadrat **16×16** dla przedmiotów i bloków,
 **32×32** dla encji `FluffModel`, 8 bitów na kanał, RGBA (paleta indexed bywa
 gubiona przez `SpriteLoader` — lepiej oddać RGBA), **bez interlace’u** (Adam7),
 bez uciętych chunków i bez sklejkowych CRC. `--validate` rozdziela dwie rzeczy:
@@ -825,7 +856,7 @@ src/main/resources/
   assets/wandzz/models/{item,block}/ – 61 + 12 modeli (warstwy -> textures/)
   assets/wandzz/blockstates/ – 8 plikow
   assets/wandzz/lang/         – pl_pl + en_us, 175 kluczy w kazdym
-  assets/wandzz/textures/     – 24 PNG (placeholdery + Twoje grafiki nadpisuja)
+  assets/wandzz/textures/     – 37 PNG (27 item / 6 block / 4 entity; placeholdery + Twoje grafiki nadpisuja)
   data/wandzz/recipe/       – 13 × patyki, 26 × różdżki, stolik, 15 × rdzenie, deski
   data/wandzz/loot_table/blocks/ – kłoda, deski, liście (5% sadzonka), sadzonka, stolik
   data/wandzz/worldgen/     – biome + configured_feature + placed_feature
