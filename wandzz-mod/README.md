@@ -57,8 +57,16 @@ więc nie trzeba instalować Gradle'a osobno.
 ```bash
 cd wandzz-mod
 ./gradlew build        # -> build/libs/wandzz-0.1.0.jar
+./tools/install_mod.sh # ten jar do mods/ instancji (sam ja znajduje)
 ./gradlew runClient    # testy w grze (klient + wbudowany serwer deweloperski)
 ```
+
+`install_mod.sh` wyszukuje instancje PrismLaunchera po wersji (`MC=1.21.11`, własna ścieżka przez
+`-i /sciezka/do/instancji`), usuwa z `mods/` pliki, ktore modami
+nie sa ( `-sources.jar`, `*-dev.jar`, cokolwiek z `SNAPSHOT` w nazwie - to
+ostatnie to katalog Looma w `~/.gradle/caches`, nie artefakt moda), zgłasza
+brak Fabric API i odmawia instalacji jara bez `fabric.mod.json`. Nie chce
+uprawnien i nic nie nadpisuje w `mods/` poza `wandzz-*.jar`.
 
 Na Windows: `gradlew.bat build`.
 
