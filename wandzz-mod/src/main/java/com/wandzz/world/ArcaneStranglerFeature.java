@@ -366,16 +366,21 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
     }
 
     /**
-     * WSZYSTKIE liscie arkanskiego drzewa sa persistent - i to nie lenistwo.
-     * LeavesBlock ma domyslnie DISTANCE=7, a gnicie liczy sie tylko z pary
-     * DISTANCE==7 && !PERSISTENT. Feature kladacy blok przez
-     * LevelWriter#setBlock NIE przechodzi przez onPlace/updateDistance, wiec
-     * DISTANCE zostaje 7 i kazdy lisc, ktory doczekal random tiera, znikal -
-     * to wlasnie byly "znikajace liscie w niektorych miejscach". Persistent
-     * odcina te sciezke calkowicie, a do drzewa, ktore nie chce gnic, pasuje.
+     * Kazdy lisc drzewa arkanskiego: persistent I distance=1.
+     *
+     * Persistent to warstwa dodatkowa - wlasciwego gnicia nie ma juz od kiedy
+     * {@link com.wandzz.block.ArcaneLeavesBlock} nadpisuje isRandomlyTicking i
+     * decaying na false. Zostaje tu, bo vanilla liczy gnicie z pary
+     * DISTANCE==7 && !PERSISTENT: feature kladacy blok przez
+     * LevelWriter#setBlock nie przechodzi przez onPlace/updateDistance, wiec
+     * DISTANCE zostaloby 7, a kazdy stan zapisany poza ta funkcja (struktura,
+     * inny mod, kopiowanie chunka) glodaloby od razu. distance=1 oznacza "lisc
+     * przy pniu" - wtedy nawet sciezka vanilla nie ma o co zaczepic.
      */
     private static BlockState leafState() {
-        return ModBlocks.ARCANE_LEAVES.defaultBlockState().setValue(LeavesBlock.PERSISTENT, true);
+        return ModBlocks.ARCANE_LEAVES.defaultBlockState()
+                .setValue(LeavesBlock.PERSISTENT, true)
+                .setValue(LeavesBlock.DISTANCE, 1);
     }
 
     /**

@@ -640,13 +640,25 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 ## Drzewa, duch arkanu i żywica
 
 - Korona: trzy warstwy 7×7, czwarta 3×3, czubek plus 3–5 wiszących kosmyków;
-  naroża bywają odpuszczone, żeby brzeg był postrzępiony. **Wszystkie** liście
-  są `persistent=true` — `LeavesBlock` ma domyślnie `DISTANCE=7`, a gnicie liczy
-  się tylko z pary `DISTANCE==7 && !PERSISTENT`; feature kładący blok przez
-  `LevelWriter#setBlock` nie przechodzi przez `onPlace`/`updateDistance`, więc
-  DISTANCE zostawało 7 i liście znikały przy pierwszym random ticku. To była
-  przyczyna „liście znikają w niektórych miejscach", nie szczękościsk dwóch
-  drzew.
+  naroża bywają odpuszczone, żeby brzeg był postrzępiony.
+- **Liście nie gniją na poziomie bloku, nie na poziomie stanu.** Vanilla liczy
+  gnicie z pary `DISTANCE==7 && !PERSISTENT` (`LeavesBlock#isRandomlyTicking` →
+  `randomTick` → `removeBlock`), a feature kładący blok przez `LevelWriter#setBlock`
+  nie przechodzi przez `onPlace`/`updateDistance`, więc DISTANCE zostaje 7.
+  Poprzednia poprawka (`persistent=true` w `leafState()`) zamykała tę ścieżkę
+  **tylko dla drzew generowanych po niej** — a liście nadal znikały, bo każdy
+  stan zapisany poza tą funkcją (stary chunk, `setblock`, struktura, inny mod)
+  miał `persistent=false` i glodzenie wracało. Teraz `ArcaneLeavesBlock`
+  (dziedziczy po `TintedParticleLeavesBlock`, więc tint i opadające cząstki
+  zostają) nadpisuje `isRandomlyTicking` i `decaying` na `false`, a `tick` na
+  no-op; `Properties.randomTicks()` usunięte, bo służyło wyłącznie domyślnej
+  implementacji `isRandomlyTicking`. `leafState()` dokłada `DISTANCE=1`, żeby
+  żaden inny mechanizm nie miał się o co zaczepić.
+- **Czego to nie naprawia:** koron, które już zdążyły zgnic w Twoim świecie.
+  Chunki się nie regenerują, więc stare drzewa zostają dziurawe – za to przestają
+  tracić kolejne liście. Nowe drzewa zobaczysz tylko w nowym terenie (daleko od
+  bazy albo nowy swiat); `F3+A` nic tu nie zmieni i to jest zachowanie
+  oczekiwane.
 - Kształt opisuje Java (`ArcaneStranglerFeature`), nie JSON: vanilla
   `blob_foliage_placer` nie umie ani zwisania, ani spirali. Rejestr idzie jako
   `wandzz:arcane_strangler`, a `configured_feature/arcane_tree.json` tylko je
