@@ -1,0 +1,28 @@
+{
+  "stats": {
+    "minecraft:picked_up": {
+      "wandzz:wand": 1
+    },
+    "minecraft:crafted": {
+      "wandzz:wand": 1
+    },
+    "minecraft:custom": {
+      "minecraft:interact_with_crafting_table": 1,
+      "minecraft:time_since_rest": 1219,
+      "minecraft:walk_one_cm": 305,
+      "minecraft:total_world_time": 1278,
+      "minecraft:leave_game": 1,
+      "minecraft:play_time": 1219,
+      "minecraft:jump": 1,
+      "minecraft:time_since_death": 1219,
+      "minecraft:drop": 1
+    },
+    "minecraft:used": {
+      "minecraft:crafting_table": 1
+    },
+    "minecraft:dropped": {
+      "wandzz:wand": 1
+    }
+  },
+  "DataVersion": 4671
+}

@@ -1,0 +1,16 @@
+{
+  "stats": {
+    "minecraft:crafted": {
+      "wandzz:wand": 1
+    },
+    "minecraft:custom": {
+      "minecraft:interact_with_crafting_table": 1,
+      "minecraft:time_since_rest": 130,
+      "minecraft:total_world_time": 755,
+      "minecraft:leave_game": 1,
+      "minecraft:play_time": 130,
+      "minecraft:time_since_death": 130
+    }
+  },
+  "DataVersion": 4671
+}
