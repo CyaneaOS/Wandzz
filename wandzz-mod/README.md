@@ -164,64 +164,127 @@ na pol godziny. Dwie nagrody, obie odczuwalne w tej samej sekundzie:
   czytania README.
 ## Gestury: czemu taki kształt, a nie inny
 
-Zmiana wymuszona przez pomiar, nie przez gust. `strike` i `leap` były **tym samym
-kształtem** (oba „V"), więc `leap` wygrywał w 10% prób - a `break_block` (kwadrat z
-przekątną) był po normalizacji trójkątem z ogonem i przegrywał z kulą ognia. Zamiast
-dobierać kształty „na oko", port algorytmu wjechał do repo:
+Druga runda poprawek, też wymuszona pomiarem, nie gustem. Poprzedni zestaw
+(dobrane w ostatniej rundzie) miał być „rozłączny” i w teście na *dokańczonym*
+geście był (99,4% trafień, zero złych rzuceń). W grze było inaczej:
 
-```
-python3 wandzz-mod/tools/gesture_set.py          # ocena zestawu z repo
-python3 wandzz-mod/tools/gesture_set.py --sync   # porównaj z GestureTemplates.java
-```
+* `heal` (kółko) nadal lądował w `torch`,
+* `strike` lądował w `torch` albo w nic,
+* `fireball` był nie do narysowania (dziesięciowiechowata gwiazda).
 
-Model rysowania nie jest biały-szumowy: suchy szum wygląda pięknie i nic nie znaczy.
-Jest **dryf brownowski** (ręka myli się wolno zmiennym przesunięciem), losowa skala
-0,5-1,7, obrót ±25° i **ucięty ogon** (gracz puszcza PPM sekundę wcześniej). Na tym
-modelu, przy 40 próbach na kształt:
+Powód jest jeden i wart zapamiętania: **mysz prawie nigdy nie domyka koła**.
+Kółko narysowane przeciągnięciem to łuk 250-330°, a dla `$1` łuk jest
+najbliżej *innego łuku*, nie *koła*. Każdy kształt z płaskim przejazdem (łuk
+bramy, górka skoku, świeczka-pochodnia = trójkąt z ogonem) był więc dla
+urwanego kółka lepszym wzorcem niż samo kółko. Stąd „leczym, a rzuca
+pochodnię” i „uderzenie rzuca pochodnię albo nic” - oba objawy tej samej
+kolizji, tyle że z różnymi sprawcami.
 
-| zestaw | koszyk lvl 1 | koszyk lvl 2 | pełny (10 kształtów) |
+### Co zmienione
+
+| czar | było | jest | dlaczego |
 |---|---|---|---|
-| stary (to, co było w grze) | ~96% | **73,5%** | **69,7% + 11,5% złych rzuceń** |
-| nowy (zmierzony, poniżej) | 99,4% | 95,6% | **92,5%, zero złych rzuceń** |
+| `torch` | świeczka (trójkąt z ogonem) | litera **T**: kreska płomienia + trzonek | trójkąt z ogonem podkradał i kółko, i „V” |
+| `strike` | „V” | **ptaszek** (krótkie ramię + długie) | „V” to po normalizacji każdy dwuramienny kształt, łącznie z daszkiem płomienia |
+| `leap` | podbieg + garb + lądowanie | **amortyzator** (góra, dół, góra, dół) | garb po zaokrągleniu naroży przez mysz = dokładnie daszek kuli ognia |
+| `fireball` | gwiazda 10-wierzchołkowa | **trójkąt w górę** (płomień) | prosba gracza: prosciej; 3 segmenty zamiast 10, i 58% → 100% trafień |
+| `open_gate` | łuk nad ziemią | **N**: dwa filary i rygiel na skos | łuk to połowa kółka; „mostek” (dwie nogi + daszek) też je podkradał w 100% urwanych prób |
+| `heal` | kółko | kółko (bez zmian) | winne były kształty łukowe, nie kółko; wariant „kółko z przerwą 300°” przegrany w pomiarze |
+| `teleport` | dwa kwadraty + kreska | bez zmian | gracz potwierdził, że działa - nie ruszamy |
+| `break_block`, `dragon_breath`, `bomb` | kreska z pudłem pod nią, fala, romb z kreską | bez zmian | 100% we wszystkich modelach |
 
-Ten sam zestaw nie zmienił się o włos - zmieniły się dwie zapory w rozpoznawaniu:
+### Jak to jest mierzone
+
+Dwa narzędzia, oba w repo, oba na wiernym porcie `$1` (`tools/gestures.py` to
+krok po kroku `DollarOneRecognizer.java`: resampling do 64 punktów, pudełko
+250, kąt wskazujący, ±45° dla kształtów otwartych i ±180° dla domkniętych,
+`score = 1 - d/176,78`):
+
+```
+python3 wandzz-mod/tools/gesture_eval.py            # 4 modele reki, 3 koszyki
+python3 wandzz-mod/tools/gesture_set.py             # model „gracz dokańcza gest”
+python3 wandzz-mod/tools/gesture_sweep.py            # przeszukanie par (skok, brama)
+python3 wandzz-mod/tools/gesture_eval.py --sync      # Java i Python maja te same punkty
+```
+
+Cztery modele reki w `gesture_eval.py` to nie jest „szum” - biały szum wygląda
+pięknie i nic nie znaczy. To: **żebra** (gracz rysuje tylko wierzchołki, same
+pociągnięcia proste), **urwany ogon** (to samo, ale 28% ścieżki na końcu nie
+zostaje narysowane - najczęstszy realny błąd), **drżąca mysz** (dużo punktów,
+dryf brązowski ~3× większy) i **rysik** (dużo punktów, małe drgnienia). Na
+każdym modelu losowa skala 0,55-1,5 i obrót ±20°.
+
+| zestaw | koszyk lvl 1 | koszyk lvl 2 | pełny (10) | złe rzucenia |
+|---|---|---|---|---|
+| runda 16 (świeczka, łuk, gwiazda) | 100% | 90,5% | 92,4% | **do 100% dla `heal`, `fireball`, `dragon_breath` w modelu „urwany ogon”** |
+| ten (T, ptaszek, amortyzator, trójkąt, N) | **100%** | **96,4%** | **94,3%** | **0,0%** |
+| ten, model „dokańczony gest” (`gesture_set.py`) | 100% | 100% | 97,8% | 0,0% |
+
+Dwie zapory, które trzymają te liczby, zostały z poprzedniej rundy i nadal
+robią robotę:
 
 1. **Koszyk.** `CastingScreen#castableIds` czyta komponent `wandzz:wand_data` z
    trzymanej różdżki (serwer i tak go synchronizuje) i rozpoznaje **tylko wśród
-   czarów, które twoje rdzenie udostępniają** - ten sam warunek `Spell#isProvidedBy`,
-   który sprawdza serwer. 10 kształtów walczy ze sobą; 4 nie walczą.
-2. **Margines.** `DollarOneRecognizer.AMBIGUITY_MARGIN = 0.035`: jeśli lider wyprzedza
-   wicelidera o mniej, gest jest **odrzucony** z komunikatem
-   `wandzz.gesture.ambiguous` („narysuj większy i wyrazniejszy"), a nie rzucony
-   byle jak. Pomyłka jest nie do naprawienia (dostałes nie ten czar, którego nie chciałeś),
-   odmowa jest do naprawienia (rysujesz jeszcze raz). Stąd 7,5% „odmów" w koszyku
-   pełnym zamiast 11,5% złych czarów.
+   czarów, które twoje rdzenie udostępniają** - ten sam warunek
+   `Spell#isProvidedBy`, który sprawdza serwer. 10 kształtów walczy ze sobą;
+   4 nie walczą.
+2. **Margines.** `DollarOneRecognizer.AMBIGUITY_MARGIN = 0,035`: jeśli lider
+   wyprzedza wicelidera o mniej, gest jest **odrzucony** z komunikatem
+   `wandzz.gesture.ambiguous` („narysuj większy i wyrazniejszy”), a nie rzucony
+   byle jak. Pomyłka jest nie do naprawienia, odmowa jest do naprawienia (rysujesz
+   jeszcze raz). Stąd 2,2-5,7% „odmów” zamiast złych czarów.
 
-Obniżony próg ze zgrania **nie** ignoruje marginesu - zgranie pomaga na drżenie ręki,
-nie na niejednoznaczność.
+Obniżony próg ze zgrania **nie** ignoruje marginesu - zgranie pomaga na drżenie
+ręki, nie na niejednoznaczność.
 
 ### Co rysować (10 czarów)
 
+Ten sam rysunek, który widzi gracz, jest w [`docs/gestures.png`](docs/gestures.png)
+(czerwona kropka = początek, niebieska = koniec). Obrazek jest *generowany* ze
+środków gry, więc nie może się rozjechać z kodem:
+
+```
+python3 wandzz-mod/tools/gesture_sheet.py     # nadpisuje docs/gestures.png
+```
+
 | czar | gest | ile segmentów |
 |---|---|---|
-| `strike` | „V" - młotek w podłogę | 2 |
-| `break_block` | kratka „#" jednym pociągnięciem | 4 |
-| `torch` | świeczka: podstawa, płomień, powrót | 4 |
-| `leap` | podbieg + garb + lądowanie (przeskoczona przeszkoda) | 4 |
-| `heal` | **kółko** | 32 próbkowane |
-| `fireball` | „burst" - dziesięciokąt z pięcioma wklęśnięciami | 10 |
-| `dragon_breath` | fala z dwoma garbami (spirala wypadła: patrz niżej) | 44 próbki |
-| `open_gate` | **otwarty łuk** nad ziemią | 22 próbki |
+| `strike` | **ptaszek**: kreska w prawo, długa skos w górę | 3 |
+| `break_block` | kreska w prawo, wróć, pudło pod nią (sześciu odcinków) | 6 |
+| `torch` | litera **T**: kreska w prawo, wróć na środek, w dół | 3 |
+| `leap` | **amortyzator**: w górę, w dół, w górę, w dół | 4 |
+| `heal` | **kółko** (najlepiej zamknięte, ale nie musi być) | 32 próbkowane |
+| `fireball` | **trójkąt**: baza w prawo, skos w górę, skos w dół | 3 |
+| `dragon_breath` | fala: w dół, w górę, w dół - od lewej do prawej | 44 próbki |
+| `open_gate` | litera **N**: lewy filar w górę, skos do prawego, prawy filar w dół | 3 |
 | `teleport` | **dwa kwadraty połączone kreską** | 9 |
 | `bomb` | romb z kreską w środku | 6 |
 
-Trzy ofiary, o których warto wiedzieć:
-* `dragon_breath` był spiralą i **w ogóle nie dawał się rzucić** - po resamplingu do
-  64 punktów kształt spirali zależy od tego, kiedy puścisz przycisk, średni wynik
-  spadał do 0,68, czyli pod próg. Fala ma garby zawsze.
-* `bomb` był literą „X" - po ucięciu ogona zostaje z niej „V", czyli `strike`.
-* `heal` (kółko) i `open_gate` (łuk) to ten sam rod krzywizn; dlatego brama jest
-  **otwarta**, a nie domknięta w prostokąt - prostokąt po normalizacji to kółko.
+Kształty są do siebie niepodobne *z konstrukcji*, nie z dekoracji: ptaszek i
+pudło mają nachodzące na siebie odcinki, T i N mają prostopadłe ramiona,
+amortyzator i trójkąt mają zamknięty obwód (albo dwie wysokie nogi), kółko i fala są
+jedynymi gładkimi krzywiznami, a dwa kwadraty są jedynym kształtem z dwoma
+oddzielnymi obwodami. To właśnie te cechy `$1` widzi po normalizacji.
+
+### Czego już nie próbować (trzy ofiary, żeby nie powtarzać)
+
+* **Kółko z przerwą (300°) jako `heal`.** Brzmi mądrze („skoro mysz nie domyka,
+  to niech szablon też nie”), w pomiarze gorsze: dla *dokańczonych* kółek
+  58-88% trafień zamiast 100%, bo `resample` rozkłada 64 punkty na łuku
+  inaczej niż na kole, a kąt wskazujący startuje od przerwanej strony.
+* **Mostek (dwie nogi + daszek) jako `open_gate`.** Zamiast łuku - też podkrada
+  urwane kółko, w 100% prób. Został `N`, bo ściany N są prostopadłe i mają
+  samoprzecięcie: kółko ucięte trafia do `heal` albo jest odrzucane.
+* **Litera „X” jako `bomb`.** Po ucięciu ogona zostaje z niej „V”, czyli dawne
+  `strike`; romb z kreską ma pięć segmentów i zamknięty obwód, więc nie ma
+  z czym go pomylić.
+
+Jedna rzecz, której nie naprawi żaden kształt: jeśli ktoś narysuje *pusty*
+daszek „˄” (bez podstawy płomienia), to nie jest żaden gest z tej listy -
+`$1` przyzna mu najbliższy dwuramienny kształt i padnie na `torch`. Księga
+zaklec pokazuje podstawę; jak coś takiego się przydarzy, w `latest.log` jest
+linia `Wandzz: gest nierozpoznany (najblizej ... ) | koszyk: [...]` z wynikiem
+lidera, wiceliderem i listą czarów w koszyku - to jest najszybsza diagnoza.
 
 ## Wiązanka jednorożców: czemu się nie respiła
 
@@ -538,30 +601,27 @@ o `Spell#canCast` przed płatnością.
 
 ### Wzorce gestów
 
-Ładniejszy sposób obejrzenia gestów niż tablica poniżej: otwórz **księgę zaklęć** –
-diagramy są rysowane bezpośrednio z tych samych punktów, które trafiają do
-`SpellRegistry`, więc nie mogą się rozjechać z kodem. `docs/gestures.png` to ten sam
-widok, ale wyrenderowany w rundzie 4 (7 gestów, bez `open_gate`) – zostaje jako
-snapshot do porównań, nie źródło prawdy.
+Źródłem prawdy jest Java (`GestureTemplates`), a nie tablica w README – dlatego
+żadnych współrzędnych tu nie przepisujemy. Trzy sposoby, żeby je zobaczyć:
 
-Współrzędne wzorców (przestrzeń robocza ±100, oś Y w dół; rozpoznawanie jest
-niezależne od skali i obrotu):
+* **księga zaklęć** w grze (diagram pod opisem czaru) – rysuje te same punkty,
+* `docs/gestures.png` – arkusz 10 kształtów, **generowany** przez
+  `python3 wandzz-mod/tools/gesture_sheet.py`, więc nie może się rozjechać,
+* `python3 wandzz-mod/tools/gesture_eval.py --sync` – sprawdza, że Python i Java
+  mają co do punktu te same kształty (używane przy każdej zmianie gestu).
 
-| gest | punkty wzorca (w tej kolejności) | typ |
-|---|---|---|
-| `strike` | `(-100,-80) (0,80) (100,-80)` | otwarty |
-| `torch` | `(0,100) (0,-80) (20,-100)` | otwarty |
-| `break_block` | `(-100,-100) (100,-100) (100,100) (-100,100) (-100,-100) (100,100)` | zamknięty |
-| `fireball` | `(0,-100) (100,100) (-100,100) (0,-100)` | zamknięty |
-| `teleport` | `(-100,-100) (20,-100) (-60,0) (100,0) (-20,100) (100,100)` | otwarty |
-| `bomb` | `(-100,-100) (100,100) (100,-100) (-100,100)` | otwarty |
-| `dragon_breath` | spirala `r = 100·i/48`, `φ = 4π·i/48`, i = 0…48 (od środka) | otwarty |
-| `open_gate` | `(-100,100) (-100,-100) (100,-100) (100,100)` – łuk/brama | otwarty |
+Przydatna różnica, którą widać na rysunkach: kształt **domknięty** (ostatni punkt
+= pierwszy: `heal`, `fireball`, `teleport`, `bomb`) jest przeszukiwany obrotami w
+pełnym zakresie ±180°, a **otwarty** (`strike`, `break_block`, `torch`, `leap`,
+`dragon_breath`, `open_gate`) tylko w ±45°. Stąd tyle kłopotu z łukami: otwarty
+kształt nie może obracać się do góry nogami, więc „daszek" i „miska" to dwa różne
+gesty – ale mysz i tak zaokrągla naroża, dlatego trzymamy się kanciastych
+kształtów.
 
-Ważne: **podnoszenie myszy nie przerywa rysowania** — `CastingScreen` zbiera ruch
-ciągle, więc „powrót" kursora (np. z dołu prawego do górnego prawego przy X) jest
-częścią gestu i dlatego wzorce mają te dodatkowe krawędzie. Rysuj jednym
-ruchem, nie odrywając ręki od PPM.
+Ważne: **podnoszenie myszy nie przerywa rysowania** – `CastingScreen` zbiera ruch
+ciągle, więc „powrót" kursora (np. z prawego dołu do prawej góry przy kółku) jest
+częścią gestu i dlatego wzorce mają te dodatkowe krawędzie. Rysuj jednym ruchem,
+nie odrywając ręki od PPM; PPM puszcza się na końcu (to wysyła gest).
 
 ### Rzucanie
 

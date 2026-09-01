@@ -17,3 +17,7 @@ remappedSrc/
 # OS
 .DS_Store
 Thumbs.db
+
+# Python bytecode z narzedzi w wandzz-mod/tools
+__pycache__/
+*.pyc
