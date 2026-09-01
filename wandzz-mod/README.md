@@ -717,11 +717,28 @@ bez jednej zmiany w modelach.
 ```
 python3 wandzz-mod/tools/placeholder_textures.py          # uzupelnij braki
 python3 wandzz-mod/tools/placeholder_textures.py --check  # kontrolka: 0 = kompletne
+python3 wandzz-mod/tools/placeholder_textures.py --validate   # format kazdego PNG
+python3 wandzz-mod/tools/placeholder_textures.py --fix-alpha  # napraw alfa ~0 (patrz nizej)
+python3 wandzz-mod/tools/texture_sheet.py                 # docs/textures.png: jak widzi gra
 ```
+
+`docs/textures.png` to ten sam powiekszony x8 podglad, ktory patrzy na tekstury
+dwa razy: na szachownicy (widac, gdzie jest przezroczystosc) i na szarym tle
+(widac, czy ksztalt nie ginie w ekwipunku). Kolejnosc komorek = alfabetyczna
+kolejnosc plikow, skrypt wypisuje ja na stdout.
+
+**Alfa ~0: blad, ktory latwo zrobic w Asepricie.** 10 wlasnoręcznie narysowanych
+patykow trafilo do repo z „kreską światła” o alfa `1/255` — bo warstwa miała
+moc ~0% i tak została spłaszczona przy eksporcie. Taki sprite w grze wygląda jak
+sama nitka: te piksele istnieją, ale są przezroczyste. `--validate` krzyczy na
+to ostrzeżeniem (`N pikseli z alfa 1-24`), a `--fix-alpha` podnosi je do 255
+nie ruszając tła; oba przypadki są w `docs/textures.png` przed i po. Przy okazji
+to jest powód, dla którego `--validate` nie traktuje rozmiaru 32×32 jako błędu:
+to sprawa gustu, a alfa `1` to błąd narzędzia.
 
 | slot (plik, ktory nadpisujesz) | co to jest | czyj |
 |---|---|---|
-| `textures/item/oak_stick.png` … `pale_oak_stick.png` (10 sztuk: `oak`, `spruce`, `birch`, `jungle`, `acacia`, `dark_oak`, `crimson`, `warped`, `cherry`, `pale_oak`) | patyki do recipes | **Twoje** (16×16 RGBA) |
+| `textures/item/oak_stick.png` … `pale_oak_stick.png` (10 sztuk: `oak`, `spruce`, `birch`, `jungle`, `acacia`, `dark_oak`, `crimson`, `warped`, `cherry`, `pale_oak`) | patyki do recipes | **Twoje, w repo** (16×16 RGBA, po naprawie alfa) |
 | `textures/item/mangrove_stick.png`, `arcane_stick.png`, `arcane_blessed_stick.png` | mangrowiec + drewno duchów (Święty patyk wygląda identycznie jak zwykły, dopóki nie ma swojej tekstury) | placeholder do namalowania |
 | `textures/item/arcane_resin.png` | żywica (przedmiot czysto opisowy) | placeholder |
 | `textures/block/arcane_log{,_stripped,_blessed,_top}.png`, `arcane_leaves.png`, `arcane_sapling.png` | kłoda, okorowana, poświęcona, góra pnia, liście (tint!), sadzonka | placeholder |

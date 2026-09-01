@@ -29,6 +29,10 @@ ODCIEN = {
     'crimson': (106, 50, 71), 'warped': (49, 150, 151), 'cherry': (227, 199, 190),
     'pale_oak': (217, 212, 201), 'mangrove': (128, 84, 66), 'bamboo': (147, 179, 82),
     'arcane': (96, 128, 190),
+    # te dwa po pelnej nazwie, bo dziel przedrostek, a musza sie roznic:
+    # to dokladnie ten blad, przez ktory "swiety patyk" wygladal jak zwyczajny
+    'arcane_stick': (96, 128, 190), 'arcane_blessed_stick': (212, 176, 74),
+    'arcane_resin': (198, 140, 40),
 }
 ROZMIAR = 16
 
@@ -157,6 +161,25 @@ def waliduj():
             krok = w * (3 if typ_k == 2 else 4)
             if typ_k == 3:
                 krok = w
+            if typ_k in (4, 6):
+                dane = zlib.decompress(idat)
+                kan = 4 if typ_k == 6 else 2
+                slabe, zera = 0, 0
+                for y in range(h):
+                    wiersz = dane[y * (w * kan + 1) + 1:(y + 1) * (w * kan + 1)]
+                    for x in range(w):
+                        a = wiersz[x * kan + kan - 1]
+                        if a == 0:
+                            zera += 1
+                        elif a <= 24:
+                            slabe += 1
+                if slabe >= 3:
+                    ostrzezenia.append('%s: %d pikseli z alfa 1-24 (0-9%%) - to zwykle warstwa '
+                                       'o mocy ~0%% w Asepricie, spłaszczona do a=1; w grze jej NIE widać. '
+                                       'Napraw: przywróc warstwie 100%% albo odpal --fix-alpha'
+                                       % (rel, slabe))
+                if zera == w * h:
+                    raise ValueError('sprite calkowicie przezroczysty (export z wyłączoną warstwą?)')
             if len(zlib.decompress(idat)) != (krok + 1) * h:
                 raise ValueError('rozmiar IDAT nie pasuje do %dx%d (sklejone dwa zapisy?)' % (w, h))
         except Exception as e:                       # noqa: BLE001 - raport, nie crash
@@ -175,7 +198,55 @@ def waliduj():
     return 1 if bledy else 0
 
 
+def napraw_alfa():
+    """a=1..24 -> a=255. Nie dotyka pikseli calkowicie przezroczystych (tlo)."""
+    naprawione = []
+    for plik in sorted((ASSETS / 'textures').rglob('*.png')):
+        d = plik.read_bytes()
+        i = 8
+        czesci, idat, hdr = [], b'', None
+        while i + 8 <= len(d):
+            ln = struct.unpack('>I', d[i:i + 4])[0]
+            typ = d[i + 4:i + 8]
+            czesci.append((typ, d[i + 8:i + 8 + ln]))
+            if typ == b'IHDR':
+                hdr = struct.unpack('>IIBBBBB', d[i + 8:i + 8 + ln])
+            elif typ == b'IDAT':
+                idat += d[i + 8:i + 8 + ln]
+            i += 12 + ln
+        w, h, _bd, typ_k, _c, _f, il = hdr
+        if typ_k != 6 or il:
+            continue                                  # RGBA bez interlace'u, inaczej nie ruszamy
+        surowe = zlib.decompress(idat)
+        krok = 1 + w * 4
+        slabe = 0
+        for y in range(h):
+            start = y * krok + 1
+            for x in range(w):
+                k = start + x * 4 + 3
+                if 0 < surowe[k] <= 24:
+                    surowe = surowe[:k] + b'\xff' + surowe[k + 1:]
+                    slabe += 1
+        if not slabe:
+            continue
+        nowe, out = b'', bytearray()
+        for typ, dane in czesci:
+            if typ == b'IDAT':
+                dane = zlib.compress(bytes(surowe), 9)
+            out += struct.pack('>I', len(dane)) + typ + dane
+            out += struct.pack('>I', zlib.crc32(typ + dane) & 0xFFFFFFFF)
+        plik.write_bytes(b'\x89PNG\r\n\x1a\n' + bytes(out))
+        naprawione.append('%s: %d pikseli' % (plik.relative_to(REPO), slabe))
+    for n in naprawione:
+        print('  naprawione  %s' % n)
+    if not naprawione:
+        print('nie ma nic do naprawy (zadny plik nie ma pikseli z alfa 1-24)')
+    return 0
+
+
 def main():
+    if '--fix-alpha' in sys.argv:
+        return napraw_alfa()
     if '--validate' in sys.argv:
         return waliduj()
     braki = tekstury_wskazane_przez_modele() + tekstury_wskazane_w_javie()
@@ -191,7 +262,7 @@ def main():
     for docel, id_, model in braki:
         if docel.exists():
             continue                      # nigdy nie nadpisujemy cudzej grafiki
-        drewno = docel.stem.split('_')[0]
+        drewno = docel.stem if docel.stem in ODCIEN else docel.stem.split('_')[0]
         png16(docel, ODCIEN.get(drewno, (150, 150, 150)))
         zrobione += 1
         print('placeholder: %s' % docel.relative_to(REPO))
