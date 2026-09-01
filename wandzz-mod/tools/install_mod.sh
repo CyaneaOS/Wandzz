@@ -6,7 +6,9 @@
 #
 #   ./gradlew build && ./tools/install_mod.sh
 #   ./tools/install_mod.sh -i '~/.local/share/PrismLauncher/instances/1.21.11(1)'
-#   ./tools/install_mod.sh --dry-run
+#   ./tools/install_mod.sh --dry-run          # tylko pokaze, co zrobi
+#   ./tools/install_mod.sh --list             # wszystkie instancje + wersje MC
+#   ./tools/install_mod.sh --fix-mods         # gdy mods/ to plik lub zly symlink
 #   MC=1.21.11 ./tools/install_mod.sh          # inna wersja do wyszukania
 set -euo pipefail
 
@@ -14,6 +16,8 @@ MOD=wandzz
 MC="${MC:-1.21.11}"
 CERTA=""
 SUCHO=0
+NAPRAW=0
+LISTUJ=0
 ROOTS=("$HOME/.local/share/PrismLauncher"
         "$HOME/.var/app/org.prismlauncher.PrismLauncher/data/PrismLauncher"
         "$HOME/.minecraft")
@@ -22,7 +26,9 @@ while [ $# -gt 0 ]; do
     case "$1" in
         -i|--instance) CERTA="$2"; shift 2 ;;
         --dry-run|-n)  SUCHO=1; shift ;;
-        -h|--help)     sed -n '2,12p' "$0"; exit 0 ;;
+        --fix-mods)    NAPRAW=1; shift ;;
+        --list)        LISTUJ=1; shift ;;
+        -h|--help)     sed -n '2,14p' "$0"; exit 0 ;;
         *) echo "nie znam argumentu: $1" >&2; exit 2 ;;
     esac
 done
@@ -46,6 +52,21 @@ if ! unzip -l "$JAR" 2>/dev/null | grep -q '^.*fabric\.mod\.json$'; then
     exit 1
 fi
 
+if [ "$LISTUJ" -eq 1 ]; then
+    echo "instancje znalezione w znanych katalogach launchera:"
+    for root in "${ROOTS[@]}"; do
+        [ -d "$root/instances" ] || continue
+        for inst in "$root"/instances/*/; do
+            [ -d "$inst" ] || continue
+            wersja=$( { grep -h -m1 -E '^(mcversion|IntendedVersion|OverrideMinecraft)' \
+                         "$inst/pack.yml" "$inst/instance.cfg" 2>/dev/null || true; } \
+                       | head -1 | sed -E 's/^[^:=]*[:=][[:space:]]*//' | tr -d ' ' )
+            printf '  %-56s %s\n' "$(basename "$inst")" "${wersja:-?}"
+        done
+    done
+    exit 0
+fi
+
 # --- cel: katalog z mods/ ---------------------------------------------------
 CELE=()
 if [ -n "$CERTA" ]; then
@@ -55,8 +76,12 @@ if [ -n "$CERTA" ]; then
 else
     for root in "${ROOTS[@]}"; do
         [ -d "$root/instances" ] || continue
-        while IFS= read -r inst; do CELE+=("$inst"); done \
-            < <(find "$root/instances" -maxdepth 1 -mindepth 1 -type d -name "*$MC*" | sort)
+        while IFS= read -r inst; do
+            [ -f "$inst/pack.yml" ] || [ -f "$inst/instance.cfg" ] || continue
+            if grep -q "$MC" "$inst/pack.yml" 2>/dev/null || grep -q "OverrideMinecraft\|$MC" "$inst/instance.cfg" 2>/dev/null || basename "$inst" | grep -q "$MC"; then
+                CELE+=("$inst")
+            fi
+        done < <(find "$root/instances" -maxdepth 1 -mindepth 1 -type d | sort)
     done
     if [ ${#CELE[@]} -eq 0 ]; then
         for root in "${ROOTS[@]}"; do
@@ -79,6 +104,28 @@ fi
 INST="${CELE[0]}"
 MODS="$INST/mods"
 if [ ! -d "$INST" ]; then echo "brak katalogu instancji: $INST" >&2; exit 1; fi
+
+# "mods" bywa PLIKIEM albo uszkodzonym symlinkiem - wowczas cp mowi
+# "Nie jest katalogiem" i czlowiek szuka bledu nie tam, gdzie trzeba
+if [ -L "$MODS" ] && [ ! -d "$MODS" ]; then
+    CEL=$(readlink -f "$MODS")
+    echo "mods to symlink w niebyt: $MODS -> $CEL" >&2
+    if [ "$NAPRAW" -eq 1 ]; then
+        mkdir -p "$CEL" && echo "  utworzono $CEL"
+    else
+        echo "  napraw:  ./tools/install_mod.sh --fix-mods" >&2
+        exit 1
+    fi
+elif [ -e "$MODS" ] && [ ! -d "$MODS" ]; then
+    echo "mods NIE jest katalogiem ($(stat -c '%A %s B' "$MODS")): $MODS" >&2
+    if [ "$NAPRAW" -eq 1 ]; then
+        mv "$MODS" "$MODS.zawadzal-$(date +%s)" && mkdir -p "$MODS"
+        echo "  przeniesiono go do $MODS.zawadzal-* i zrobiono katalog"
+    else
+        echo "  napraw:  ./tools/install_mod.sh --fix-mods" >&2
+        exit 1
+    fi
+fi
 echo "instancja : $INST"
 echo "jar       : $JAR  ($(stat -c %s "$JAR") B)"
 echo "mods      : $MODS"

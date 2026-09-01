@@ -674,11 +674,47 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 - `wandzz:arcane_resin` ma własną klasę (`ArcaneResinItem`) tylko po to, żeby
   tooltip tłumaczył mechanikę w grze (dwie linie, oba klucze użyte — kontrolka
   wywala martwe klucze lang).
-- Placeholdery tekstur (`assets/wandzz/textures/{block,item,entity}`, 7 PNG) są
-  po to, żeby kształt było widać w grze. Liście są szare celowo: mnoży je tint z
+- Placeholdery tekstur (`assets/wandzz/textures/{block,item,entity}`, 24 PNG) są
+  po to, żeby kształt było widać w grze i żeby brak Twojej grafiki nie dawał
+  fioletowej kostki. Liście są szare celowo: mnoży je tint z
   `ColorProviderRegistry.BLOCK` w `WandzzClient` — chcesz malować fiolet
   ręcznie, wywal tę jedną linię. Tekstura encji musi mieć 32×32
-  (`LayerDefinition.create(mesh, 32, 32)` definiuje skalę UV).
+  (`LayerDefinition.create(mesh, 32, 32)` definiuje skalę UV). Patyki od tej
+  rundy NIE są vanilla — patrz „Tekstury: co jest czyje”.
+
+## Tekstury: co jest czyje
+
+Zasada jest jedna: model wskazuje `wandzz:<sciezka>`, a gra szuka pliku
+`assets/wandzz/textures/<sciezka>.png`. Nie ma pliku — jest fioletowa kostka,
+więc `tools/placeholder_textures.py` dorzuca brzydkie, ale czytelne zastępstwo
+(ukośny patyk w odcieniu drewna) i **nigdy nie nadpisuje tego, co już leży**.
+Czyli: wrzucasz swoje PNG do `textures/item/` pod taką samą nazwą i wygrywają,
+bez jednej zmiany w modelach.
+
+```
+python3 wandzz-mod/tools/placeholder_textures.py          # uzupelnij braki
+python3 wandzz-mod/tools/placeholder_textures.py --check  # kontrolka: 0 = kompletne
+```
+
+| slot (plik, ktory nadpisujesz) | co to jest | czyj |
+|---|---|---|
+| `textures/item/oak_stick.png` … `pale_oak_stick.png` (10 sztuk: `oak`, `spruce`, `birch`, `jungle`, `acacia`, `dark_oak`, `crimson`, `warped`, `cherry`, `pale_oak`) | patyki do recipes | **Twoje** (16×16 RGBA) |
+| `textures/item/mangrove_stick.png`, `arcane_stick.png`, `arcane_blessed_stick.png` | mangrowiec + drewno duchów (Święty patyk wygląda identycznie jak zwykły, dopóki nie ma swojej tekstury) | placeholder do namalowania |
+| `textures/item/arcane_resin.png` | żywica (przedmiot czysto opisowy) | placeholder |
+| `textures/block/arcane_log{,_stripped,_blessed,_top}.png`, `arcane_leaves.png`, `arcane_sapling.png` | kłoda, okorowana, poświęcona, góra pnia, liście (tint!), sadzonka | placeholder |
+| `textures/entity/{unicorn,phoenix,chronos_boss,arcane_sprite}.png` | encje | placeholder, **32×32** |
+| 13 × `*_wand.json` i 13 × `*_wand_magic.json` | rózdzki | vanilla `blaze_rod` / `breeze_rod` — slotów własnych jeszcze nie ma |
+
+Format, którego trzymaj się przy eksporcie (to rzeczy, które realnie potrafią
+dać fioletową kostkę albo czarny tuf): kwadrat **16×16** dla przedmiotów i bloków,
+**32×32** dla encji `FluffModel`, 8 bitów na kanał, RGBA (paleta indexed bywa
+gubiona przez `SpriteLoader` — lepiej oddać RGBA), **bez interlace’u** (Adam7),
+bez uciętych chunków. Obie kontrolki sa w jednym narzedziu:
+
+```
+python3 wandzz-mod/tools/placeholder_textures.py --check      # czy model nie wskazuje w pustke
+python3 wandzz-mod/tools/placeholder_textures.py --validate   # czy kazdy PNG jest poprawny
+```
 
 ## Czego brakuje / co warto dopracować dalej
 
@@ -692,12 +728,12 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 
 - Pozostałe 13 core'ów ma tylko nazwę i poziom – potrzebują własnych zaklęć
   i efektów (analogicznie do Feather/Dragon Breath).
-- **Tekstury to placeholderki z vanilla**: różdżki renderują się jako
-  `blaze_rod` (magiczne jako `breeze_rod`), patyki jako `minecraft:item/stick`
-  (bambusowy jako `bamboo`), kłoda/deski/liście/sadzonka jako `oak_*`, stolik jako
-  `crafting_table_top` + `barrel_side`. Własne PNG: `assets/wandzz/textures/*` i
-  podmiana `layer0`/`all` w modelach — plików `.png` nie trzeba tworzyć, dopóki
-  nie chcesz ich w grze.
+- **Różdżki nadal udają vanilla**: `*_wand` to `minecraft:item/blaze_rod`,
+  `*_wand_magic` to `minecraft:item/breeze_rod` (13 + 13 modeli). Świadomie —
+  własne tekstury mają być Twoje, a sloty na nie trzeba najpierw założyć
+  (`wandzz:item/<gatunek>_wand`). Patyki są już podpięte pod `wandzz:item/*_stick`,
+  kłoda/liście/sadzonka/żywica pod `wandzz:block|item/*`, a stolik jako
+  `crafting_table_top` + `barrel_side` został.
 - Okno stolika nie ma drag & drop z ekwipunku (klik = włożenie, `Zatwierdź` =
   zapis). Pełny kontener dalby przeciąganie, ale wymaga access widenera na
   `MenuScreens#register` + `ScreenConstructor` (prywatne w 1.21.11) i `MenuType`
@@ -727,8 +763,11 @@ src/main/java/com/wandzz/
   item/      – ModItems, ModComponents, ModItemGroups, WandInteractions
   Wandzz.java – ModInitializer (kolejność bootstrapu ma znaczenie)
 src/main/resources/
-  assets/wandzz/{items,models/item,models/block,blockstates,lang}/  (59 definicji itemów)
-  docs/gestures.png – arkusz wzorców gestów (1:1 z GestureTemplates)
+  assets/wandzz/items/       – 68 definicji itemów (1.21.11: model + overrides)
+  assets/wandzz/models/{item,block}/ – 61 + 12 modeli (warstwy -> textures/)
+  assets/wandzz/blockstates/ – 8 plikow
+  assets/wandzz/lang/         – pl_pl + en_us, 175 kluczy w kazdym
+  assets/wandzz/textures/     – 24 PNG (placeholdery + Twoje grafiki nadpisuja)
   data/wandzz/recipe/       – 13 × patyki, 26 × różdżki, stolik, 15 × rdzenie, deski
   data/wandzz/loot_table/blocks/ – kłoda, deski, liście (5% sadzonka), sadzonka, stolik
   data/wandzz/worldgen/     – biome + configured_feature + placed_feature
@@ -740,6 +779,12 @@ src/client/java/com/wandzz/client/
   WandCoreScreen.java – okno stolika (klik = włóż/wyjmij, „Zatwierdź”)
   WandzzHud.java      – pasek many;  ManaClientState.java – clientowy stan many
   WandzzClient.java   – ClientModInitializer (odbiorniki S2C, HUD, PPM = rzucanie)
+docs/gestures.png  – arkusz wzorców gestów, GENEROWANY przez tools/gesture_sheet.py
+tools/             – gesture_eval.py (test 4 rak + --sync), gesture_set.py (gest
+                     dokańczany), gesture_sweep.py (przeszukiwanie par ksztaltow),
+                     gesture_sheet.py (arkusz PNG), gestures.py (port $1),
+                     placeholder_textures.py (uzupełnia braki tekstur, nie nadpisuje),
+                     install_mod.sh (jar -> mods/ instancji, --list, --fix-mods)
 ```
 
 Skróty klawiszy i `key.wandzz.cast` na razie tylko istnieją w `lang` — obsługa
