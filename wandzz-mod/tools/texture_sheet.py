@@ -15,9 +15,13 @@ na standardowe wyjscie, linia po linii, wiec komorek nie trzeba podpisywac.
 Rysowanie czystym Pythonem (PNG zapisany recznie), zero zaleznosci.
 """
 import pathlib
+import pathlib
 import struct
 import sys
 import zlib
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import png as PNG   # noqa: E402
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 TEX = REPO / 'src/main/resources/assets/wandzz/textures/item'
@@ -32,55 +36,12 @@ RAMA = (60, 60, 66)
 
 
 def czytaj_png(sciezka):
-    """(w, h, [(r,g,b,a), ...]) wierszami od gory; RGBA, 8 bitow, bez interlace'u."""
-    d = sciezka.read_bytes()
-    if d[:8] != b'\x89PNG\r\n\x1a\n':
-        raise ValueError('to nie PNG')
-    i, idat, hdr, paleta, trns = 8, b'', None, None, None
-    while i + 8 <= len(d):
-        ln = struct.unpack('>I', d[i:i + 4])[0]
-        typ = d[i + 4:i + 8]
-        dane = d[i + 8:i + 8 + ln]
-        if typ == b'IHDR':
-            hdr = struct.unpack('>IIBBBBB', dane)
-        elif typ == b'IDAT':
-            idat += dane
-        elif typ == b'PLTE':
-            paleta = [tuple(dane[3 * k:3 * k + 3]) for k in range(len(dane) // 3)]
-        elif typ == b'tRNS':
-            trns = dane
-        i += 12 + ln
-    w, h, glebia, typ_k, _komp, _flt, interlace = hdr
-    if glebia != 8:
-        raise ValueError('glebia %d bitow - arkusz liczy na 8' % glebia)
-    if interlace:
-        raise ValueError('interlace Adam7 - najpierw wyeksportuj bez niego')
-    kana = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[typ_k]
-    surowe = zlib.decompress(idat)
-    krok = 1 + w * kana
-    if paleta is not None and trns is not None:
-        paleta = [p + (trns[k] if k < len(trns) else 255) for k, p in enumerate(paleta)]
-    piksele = []
-    for y in range(h):
-        wiersz = surowe[y * krok + 1:(y + 1) * krok]
-        for x in range(w):
-            if typ_k == 3:
-                idx = wiersz[x]
-                if paleta and idx < len(paleta):
-                    piksele.append(paleta[idx] if len(paleta[idx]) == 4 else paleta[idx] + (255,))
-                else:
-                    piksele.append((255, 0, 255, 255))
-            else:
-                px = wiersz[x * kana:(x + 1) * kana]
-                if kana == 1:
-                    piksele.append((px[0], px[0], px[0], 255))
-                elif kana == 2:
-                    piksele.append((px[0], px[0], px[0], px[1]))
-                elif kana == 3:
-                    piksele.append((px[0], px[1], px[2], 255))
-                else:
-                    piksele.append((px[0], px[1], px[2], px[3]))
-    return w, h, piksele
+    """Dekoder z tools/png.py - MUSI byc on, nie "reczne" czytanie IDAT.
+
+    Filtry wierszy (Sub/Up/Average/Paeth) odsvieza PNG.czytaj; ktora czyta
+    bajty bez tego, ten widzi inne kolory i inna alfe niz gra.
+    """
+    return PNG.czytaj(sciezka)
 
 
 class Pplotno:
@@ -117,11 +78,13 @@ class Pplotno:
 
 def narysuj(pl, tekstura, x0, y0, tlo_fn):
     """Jedna tekstura, powiekszona, na wskazanym tle (x0,y0 = lewy gorny rog w pikselach arkusza)."""
-    w, h, piksele = tekstura
+    w, h, kana, piksele = tekstura
+    alfa = (kana == 4) or (kana == 2)
     for y in range(h):
         for x in range(w):
-            r, g, b, a = piksele[y * w + x]
-            kolor = (r, g, b) if a > 127 else tlo_fn(x0 + x * POWIEKSZ, y0 + y * POWIEKSZ)
+            px = piksele[y * w + x]
+            a = px[3] if alfa else 255
+            kolor = (px[0], px[1], px[2]) if a > 127 else tlo_fn(x0 + x * POWIEKSZ, y0 + y * POWIEKSZ)
             for j in range(POWIEKSZ):
                 for i in range(POWIEKSZ):
                     pl.punkt(x0 + x * POWIEKSZ + i, y0 + y * POWIEKSZ + j, kolor)

@@ -9,6 +9,7 @@ obok i ona wygrywa.
 
     python3 wandzz-mod/tools/placeholder_textures.py            # uzupelnij braki
     python3 wandzz-mod/tools/placeholder_textures.py --check    # tylko wypisz, czego brak
+    python3 wandzz-mod/tools/placeholder_textures.py --validate  # format + alfa kazdego PNG
 
 Ksztalt to ukosny patyk (3 px) z obrys - tyle, zeby w ekwipunku bylo widac, ze
 to kawek drewna, a nie bron. Kolor = przyblizony odcien danego drewna.
@@ -18,6 +19,9 @@ import pathlib
 import struct
 import sys
 import zlib
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import png as PNG   # noqa: E402  - nasze PNG czytane ODFILTROWANE
 
 REPO = pathlib.Path(__file__).resolve().parents[1]
 ASSETS = REPO / 'src/main/resources/assets/wandzz'
@@ -162,26 +166,23 @@ def waliduj():
             if typ_k == 3:
                 krok = w
             if typ_k in (4, 6):
-                dane = zlib.decompress(idat)
-                kan = 4 if typ_k == 6 else 2
-                slabe, zera = 0, 0
-                for y in range(h):
-                    wiersz = dane[y * (w * kan + 1) + 1:(y + 1) * (w * kan + 1)]
-                    for x in range(w):
-                        a = wiersz[x * kan + kan - 1]
-                        if a == 0:
-                            zera += 1
-                        elif a <= 24:
-                            slabe += 1
+                # TU jest istota rzeczy: wartosci pikseli znacie tylko PO odsviezeniu
+                # filtrow wierszy (Sub/Up/Average/Paeth). Czytanie bajtow IDAT "jak leca"
+                # dawalo kiedys falszywy alarm o "znikajacej przezroczystosci".
+                try:
+                    _w, _h, kana, piksele = PNG.czytaj(plik)
+                except ValueError as e:
+                    raise ValueError(str(e))
+                slabe = sum(1 for p in piksele if 0 < (p[3] if kana == 4 else 255) <= 24)
+                zera = sum(1 for p in piksele if kana == 4 and p[3] == 0)
                 if slabe >= 3:
-                    ostrzezenia.append('%s: %d pikseli z alfa 1-24 (0-9%%) - to zwykle warstwa '
-                                       'o mocy ~0%% w Asepricie, spłaszczona do a=1; w grze jej NIE widać. '
-                                       'Napraw: przywróc warstwie 100%% albo odpal --fix-alpha'
-                                       % (rel, slabe))
-                if zera == w * h:
-                    raise ValueError('sprite calkowicie przezroczysty (export z wyłączoną warstwą?)')
+                    ostrzezenia.append('%s: %d pikseli z alfa 1-24 (0-9%%) - zwykle warstwa '
+                                       'o mocy ~0%% w edytorze, splaszczona przy eksporcie; '
+                                       'w grze jej nie wicad (napraw w edytorze: warstwie 100%, nie plikowi)' % (rel, slabe))
+                if zera == _w * _h:
+                    raise ValueError('sprite calkowicie przezroczysty (export z wylaczona warstwa?)')
             if len(zlib.decompress(idat)) != (krok + 1) * h:
-                raise ValueError('rozmiar IDAT nie pasuje do %dx%d (sklejone dwa zapisy?)' % (w, h))
+                raise ValueError('rozmiar danych po dekompresji nie pasuje do %dx%d' % (w, h))
         except Exception as e:                       # noqa: BLE001 - raport, nie crash
             bledy.append('%s: %s' % (rel, e))
     for b in bledy:
@@ -198,55 +199,7 @@ def waliduj():
     return 1 if bledy else 0
 
 
-def napraw_alfa():
-    """a=1..24 -> a=255. Nie dotyka pikseli calkowicie przezroczystych (tlo)."""
-    naprawione = []
-    for plik in sorted((ASSETS / 'textures').rglob('*.png')):
-        d = plik.read_bytes()
-        i = 8
-        czesci, idat, hdr = [], b'', None
-        while i + 8 <= len(d):
-            ln = struct.unpack('>I', d[i:i + 4])[0]
-            typ = d[i + 4:i + 8]
-            czesci.append((typ, d[i + 8:i + 8 + ln]))
-            if typ == b'IHDR':
-                hdr = struct.unpack('>IIBBBBB', d[i + 8:i + 8 + ln])
-            elif typ == b'IDAT':
-                idat += d[i + 8:i + 8 + ln]
-            i += 12 + ln
-        w, h, _bd, typ_k, _c, _f, il = hdr
-        if typ_k != 6 or il:
-            continue                                  # RGBA bez interlace'u, inaczej nie ruszamy
-        surowe = zlib.decompress(idat)
-        krok = 1 + w * 4
-        slabe = 0
-        for y in range(h):
-            start = y * krok + 1
-            for x in range(w):
-                k = start + x * 4 + 3
-                if 0 < surowe[k] <= 24:
-                    surowe = surowe[:k] + b'\xff' + surowe[k + 1:]
-                    slabe += 1
-        if not slabe:
-            continue
-        nowe, out = b'', bytearray()
-        for typ, dane in czesci:
-            if typ == b'IDAT':
-                dane = zlib.compress(bytes(surowe), 9)
-            out += struct.pack('>I', len(dane)) + typ + dane
-            out += struct.pack('>I', zlib.crc32(typ + dane) & 0xFFFFFFFF)
-        plik.write_bytes(b'\x89PNG\r\n\x1a\n' + bytes(out))
-        naprawione.append('%s: %d pikseli' % (plik.relative_to(REPO), slabe))
-    for n in naprawione:
-        print('  naprawione  %s' % n)
-    if not naprawione:
-        print('nie ma nic do naprawy (zadny plik nie ma pikseli z alfa 1-24)')
-    return 0
-
-
 def main():
-    if '--fix-alpha' in sys.argv:
-        return napraw_alfa()
     if '--validate' in sys.argv:
         return waliduj()
     braki = tekstury_wskazane_przez_modele() + tekstury_wskazane_w_javie()
