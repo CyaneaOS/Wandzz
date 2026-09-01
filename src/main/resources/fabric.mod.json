@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "wandzz",
+  "version": "${version}",
+  "name": "Wandzz",
+  "description": "",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/wandzz/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-datagen": [
+      "org.first.wandzz.client.WandzzDataGenerator"
+    ],
+    "client": [
+      "org.first.wandzz.client.WandzzClient"
+    ],
+    "main": [
+      "org.first.wandzz.Wandzz"
+    ]
+  },
+  "mixins": [
+    "wandzz.mixins.json",
+    {
+      "config": "wandzz.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
