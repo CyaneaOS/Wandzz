@@ -45,6 +45,12 @@ import net.minecraft.world.level.block.state.BlockState;
  * z {@link TintedParticleLeavesBlock} dzialaja jak dawniej. {@code Properties
  * .randomTicks()} zostalo usuniete - sluzylolo wylacznie do domyslnej
  * implementacji {@code isRandomlyTicking}.
+ * <p>Uwaga na jeden drobiazg: {@code codec()} jest odziedziczony po
+ * {@code TintedParticleLeavesBlock} i wskaze przy deserializacji JEGO typ, nie
+ * nasz. U nas to bez znaczenia (bloki w swiecie sa wskazywane id-em, a my nie
+ * mamy zadnych struktur z JSON-a ani {@code BlockStateProvider}ow); gdybysmy
+ * kiedys dodali jigsaw, trzeba ten codec nadpisac - inaczej struktura wstawilaby
+ * liscie bez tej klasy, czyli z gniciem.
  */
 public class ArcaneLeavesBlock extends TintedParticleLeavesBlock {
     /** Szansa opadniecia czasteczki - tyle co vanilla (0,02). */

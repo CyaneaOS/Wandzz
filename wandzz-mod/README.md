@@ -124,7 +124,18 @@ dopasowane:
 | `registerDefaultState(this.stateDefinition.any())` | pola `stateDefinition` nie widać z podklasy; idiom vanilli (`RedstoneLampBlock`) to `registerDefaultState(this.defaultBlockState().setValue(LIT, false))` |
 | `Level#getHeightmap(...)` | nie ma takiego wywołania: jest `Level#getHeight(Heightmap.Types, int x, int z)` (ewentualnie `getHeightmapPos`); pozycję platformy bramy liczymy z niego |
 | własne PNG dla „znaleziska w lawie“ | zbędne: `minecraft:block/cube_all` z `minecraft:block/crying_obsidian` / `minecraft:block/shroomlight` – ten sam trik co przy stoliku (`cube_bottom_top` + `crafting_table_top`), zero assetów do odgadywania |
-| Liście arkanskiego drzewa znikały „w niektórych miejscach” | `LeavesBlock` ma **domyślnie `DISTANCE=7`**, a `decaying()` to `DISTANCE==7 && !PERSISTENT`. `Feature#setBlock` pomija `onPlace`/`updateDistance`, więc liść urodzony w feature'zu jest formalnie „daleko od pnia” i znika przy pierwszym random ticku. U nas cała korona jest `persistent` (patrz `ArcaneStranglerFeature#leafState`) |
+| …i znikały **nadal**, choć korona już była `persistent` | tamten fix
+  działał tylko na drzewa generowane *od tej pory*. `isRandomlyTicking` w
+  vanilla to `DISTANCE==7 && !PERSISTENT`, więc każdy liść zapisany z
+  `persistent=false` **jest na liście losowego ticka swojej sekcji** i jest
+  zjadany po kawaiku przy każdym odświeżaniu terenu; feature nie zachodzi
+  drugi raz w stary chunk, więc żadna przebudowa terenu nie pomaga. Teraz
+  `ArcaneLeavesBlock` nadpisuje `isRandomlyTicking` i `decaying` na `false`
+  oraz `tick` na no-op, `Properties.randomTicks()` jest usunięte, a
+  `leafState()` dokłada `DISTANCE=1` — ścieżka gnicia nie ma się o co
+  zaczepić ani w starych, ani w nowych chunkach. Cząstki opadających liści
+  zostają, bo `animateTick` jest wywoływany z losowych pozycji w
+  `LevelRenderer#tickParticles`, a nie z random ticka |
 | `MobRenderer<ArcaneSprite, ArcaneSpriteRenderState>` – „wrong number of type arguments; required 3” | W 1.21.9+ `MobRenderer` ma **trzy** parametry: `<T extends Mob, S extends LivingEntityRenderState, M extends EntityModel<S>>` (trzeci, by `getModel()` zwracał model o znanym typie). `EntityRenderer` nadal dwa — stąd mylący komunikat. Cztery `@Override does not override` i `cannot find symbol: variable super` były kaskadą po uszkodzonej deklaracji nadklasy, nie osobnymi błędami. `MobRenderState` w 1.21.11 nie istnieje: stan po `LivingEntityRenderState`, tak jak `BatRenderState` |
 
 Wszystkie użyte nazwy klas i metod zostały sprawdzone bezpośrednio na źródłach
@@ -648,7 +659,7 @@ niskiego poziomu / za mało many / gest nierozpoznany).
   Poprzednia poprawka (`persistent=true` w `leafState()`) zamykała tę ścieżkę
   **tylko dla drzew generowanych po niej** — a liście nadal znikały, bo każdy
   stan zapisany poza tą funkcją (stary chunk, `setblock`, struktura, inny mod)
-  miał `persistent=false` i glodzenie wracało. Teraz `ArcaneLeavesBlock`
+  miał `persistent=false` i gnicie wracało. Teraz `ArcaneLeavesBlock`
   (dziedziczy po `TintedParticleLeavesBlock`, więc tint i opadające cząstki
   zostają) nadpisuje `isRandomlyTicking` i `decaying` na `false`, a `tick` na
   no-op; `Properties.randomTicks()` usunięte, bo służyło wyłącznie domyślnej
@@ -657,7 +668,7 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 - **Czego to nie naprawia:** koron, które już zdążyły zgnic w Twoim świecie.
   Chunki się nie regenerują, więc stare drzewa zostają dziurawe – za to przestają
   tracić kolejne liście. Nowe drzewa zobaczysz tylko w nowym terenie (daleko od
-  bazy albo nowy swiat); `F3+A` nic tu nie zmieni i to jest zachowanie
+  bazy albo nowy świat); `F3+A` nic tu nie zmieni i to jest zachowanie
   oczekiwane.
 - Kształt opisuje Java (`ArcaneStranglerFeature`), nie JSON: vanilla
   `blob_foliage_placer` nie umie ani zwisania, ani spirali. Rejestr idzie jako
@@ -721,7 +732,14 @@ Format, którego trzymaj się przy eksporcie (to rzeczy, które realnie potrafi�
 dać fioletową kostkę albo czarny tuf): kwadrat **16×16** dla przedmiotów i bloków,
 **32×32** dla encji `FluffModel`, 8 bitów na kanał, RGBA (paleta indexed bywa
 gubiona przez `SpriteLoader` — lepiej oddać RGBA), **bez interlace’u** (Adam7),
-bez uciętych chunków. Obie kontrolki sa w jednym narzedziu:
+bez uciętych chunków i bez sklejkowych CRC. `--validate` rozdziela dwie rzeczy:
+**błąd** (exit 1) to to, czego `SpriteLoader` nie wczyta — interlace Adam7, 16
+bitów na kanał, urwany chunk, zły CRC; **ostrzeżenie** (exit 0) to to, co się
+wczyta, ale będzie wyglądać krzywo — rozmiar inny niż 16×16 dla `item/`+`block/`
+i 32×32 dla `entity/`, paleta `indexed`, brak kanału alfa przy wycinanym kształcie.
+Czyli eksport 32×32 albo 64×64 wejdzie i zagra, tylko dostaniesz szept, że UV
+encji może się rozjechać — nie musisz nic skalować przed commitem. Obie kontrolki
+są w jednym narzędziu:
 
 ```
 python3 wandzz-mod/tools/placeholder_textures.py --check      # czy model nie wskazuje w pustke

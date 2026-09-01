@@ -3,15 +3,15 @@
 
 Model w `models/item/<nazwa>.json` wskazuje na `wandzz:item/<nazwa>`. Jesli
 pliku `textures/item/<nazwa>.png` nie ma, gra renderuje fioletowa kostke
-"missingno". Ten skrypt doklada więc brzydkie, ale czytelne zastepstwo - i
+"missingno". Ten skrypt doklada wiec brzydkie, ale czytelne zastepstwo - i
 NIGDY nie nadpisuje istniejacego pliku, wiec wlasna grafike kladziesz po prostu
 obok i ona wygrywa.
 
     python3 wandzz-mod/tools/placeholder_textures.py            # uzupelnij braki
     python3 wandzz-mod/tools/placeholder_textures.py --check    # tylko wypisz, czego brak
 
-Ksztalt to ukośny patyk (3 px) z obrys - tyle, zeby w ekwipunku bylo widac, ze
-to kawek drewna, a nie broń. Kolor = przyblizony odcień danego drewna.
+Ksztalt to ukosny patyk (3 px) z obrys - tyle, zeby w ekwipunku bylo widac, ze
+to kawek drewna, a nie bron. Kolor = przyblizony odcien danego drewna.
 """
 import json
 import pathlib
@@ -74,7 +74,7 @@ def tekstury_wskazane_przez_modele():
         try:
             m = json.loads(model.read_text(encoding='utf8'))
         except Exception as e:
-            raise SystemExit('zły JSON w %s: %s' % (model, e))
+            raise SystemExit('zly JSON w %s: %s' % (model, e))
         for warstwa, id_ in (m.get('textures') or {}).items():
             if not isinstance(id_, str) or id_.startswith('minecraft:'):
                 continue
@@ -91,7 +91,7 @@ def tekstury_wskazane_przez_modele():
 
 
 def tekstury_wskazane_w_javie():
-    """`textures/entity/coś.png` wystepujace w kodzie - te wskazują renderery mobów."""
+    """`textures/entity/cos.png` wystepujace w kodzie - te wskazuja renderery mobow."""
     import re
     braki = []
     for java in sorted((REPO / 'src').rglob('*.java')):
@@ -102,32 +102,35 @@ def tekstury_wskazane_w_javie():
     return braki
 
 
-WYMAGANY = {'item': 16, 'block': 16, 'entity': 32}    # rozmiar wedlug katalogu
+WYMAGANY = {'item': 16, 'block': 16, 'entity': 32}    # rozmiar, ktorego sie trzymamy
+OK_ROZMIARY = (8, 16, 32, 64, 128, 256)               # kwadraty, ktore MC lyka bez marudzenia
+# tekstury, ktore BEZ alfY beda mialy lity prostokat zamiast wycietego ksztaltu
+WYMAGA_ALFY = ('leaves', 'sapling', 'flower', 'crop', 'hair', 'feather')
 
 
 def waliduj():
-    """Przechodzi po wszystkich PNG i sprawdza to, co naprawde psuje render."""
-    bledy = []
+    """Przechodzi po wszystkich PNG: bledy = nie wczyta sie; ostrzezenia = bedzie brzydko."""
+    bledy, ostrzezenia = [], []
     for plik in sorted((ASSETS / 'textures').rglob('*.png')):
         d = plik.read_bytes()
-        rel = plik.relative_to(ASSETS / 'textures')
-        katalog = rel.parts[0] if rel.parts else 'item'
+        rel = str(plik.relative_to(ASSETS / 'textures'))
+        katalog = rel.split('/')[0] if '/' in rel else 'item'
         try:
             if d[:8] != b'\x89PNG\r\n\x1a\n':
-                raise ValueError('to nie PNG (zla sygnatura)')
+                raise ValueError('to nie PNG (zla sygnatura - moze to SVG albo zle skonczone?)')
             i, idat, hdr = 8, b'', None
             while i + 8 <= len(d):
                 if i + 12 > len(d):
                     raise ValueError('plik urwany (brak naglowka chunka przy bajcie %d)' % i)
                 ln = struct.unpack('>I', d[i:i + 4])[0]
-                if ln < 0 or i + 12 + ln > len(d):
-                    raise ValueError('plik urwany: chunk przy bajcie %d deklaruje %d B, a zostało %d'
-                                      % (i, ln, max(0, len(d) - i - 12)))
                 typ = d[i + 4:i + 8]
+                if ln < 0 or i + 12 + ln > len(d):
+                    raise ValueError('plik urwany: chunk przy bajcie %d deklaruje %d B, a zostalo %d'
+                                     % (i, ln, max(0, len(d) - i - 12)))
                 dane = d[i + 8:i + 8 + ln]
                 crc = struct.unpack('>I', d[i + 8 + ln:i + 12 + ln])[0]
                 if crc != (zlib.crc32(typ + dane) & 0xFFFFFFFF):
-                    raise ValueError('CRC chunku %s nie zgadza sie (plik uciety?)' % typ.decode())
+                    raise ValueError('CRC chunku %s sie nie zgadza (edytowany poza edytorem?)' % typ.decode())
                 if typ == b'IHDR':
                     hdr = struct.unpack('>IIBBBBB', dane)
                 elif typ == b'IDAT':
@@ -136,27 +139,39 @@ def waliduj():
             if hdr is None:
                 raise ValueError('brak IHDR')
             w, h, glebia, typ_k, _c, _f, interlace = hdr
-            if (w, h) != (WYMAGANY.get(katalog, 16),) * 2:
-                raise ValueError('%dx%d, a dla %s/ oczekiwane %dx%d'
-                                 % (w, h, katalog, WYMAGANY.get(katalog, 16), WYMAGANY.get(katalog, 16)))
             if glebia != 8:
-                raise ValueError('glebia %d bitow, musi byc 8' % glebia)
+                raise ValueError('glebia %d bitow na kanale - SpriteLoader oczekuje 8' % glebia)
             if interlace:
-                raise ValueError('interlace (Adam7) - Minecraft tego nie czyta')
+                raise ValueError('interlace (Adam7) - Minecraft nie dekoduje warstwowo, bedzie kostka')
             if typ_k not in (2, 3, 4, 6):
-                raise ValueError('typ koloru %d (ma byc 2=RGB, 3=paleta, 4=szary+A, 6=RGBA)' % typ_k)
+                raise ValueError('typ koloru %d (dozwolone 2=RGB, 3=paleta, 4=szary+A, 6=RGBA)' % typ_k)
+            if (w, h) != (h, w) or w not in OK_ROZMIARY:
+                ostrzezenia.append('%s: %dx%d, oczekuje sie kwadratu bedacego potega dwojku %s' % (rel, w, h, list(OK_ROZMIARY)))
+            elif katalog in WYMAGANY and w != WYMAGANY[katalog]:
+                ostrzezenia.append('%s: %dx%d (dla %s/ trzymamy sie %d, inaczej UV encji sie rozjedzie)'
+                                   % (rel, w, h, katalog, WYMAGANY[katalog]))
             if typ_k == 3:
-                raise ValueError('paleta: dziala, ale Minecraft gubi przezroczystosc tufu - zapisz RGBA')
-            surowe = zlib.decompress(idat)
-            if len(surowe) != ((w * (3 if typ_k == 2 else 4)) + 1) * h:
-                raise ValueError('rozmiar danych IDAT nie pasuje do %dx%d' % (w, h))
+                ostrzezenia.append('%s: paleta indexed - przezroczystosc bywa gubiona, zapisz RGBA' % rel)
+            if typ_k in (2, 4) and any(k in rel for k in WYMAGA_ALFY):
+                ostrzezenia.append('%s: brak kanaalu alfa, a to wyciety ksztalt - bedzie lity prostokat' % rel)
+            krok = w * (3 if typ_k == 2 else 4)
+            if typ_k == 3:
+                krok = w
+            if len(zlib.decompress(idat)) != (krok + 1) * h:
+                raise ValueError('rozmiar IDAT nie pasuje do %dx%d (sklejone dwa zapisy?)' % (w, h))
         except Exception as e:                       # noqa: BLE001 - raport, nie crash
             bledy.append('%s: %s' % (rel, e))
     for b in bledy:
-        print('  BLAD  %s' % b)
-    if not bledy:
-        print('walidacja: wszystkie PNG w porzadku (%d plikow)'
-              % len(list((ASSETS / 'textures').rglob('*.png'))))
+        print('  BLAD        %s' % b)
+    for o in ostrzezenia:
+        print('  OSTRZEZENIE %s' % o)
+    ile = len(list((ASSETS / 'textures').rglob('*.png')))
+    if not bledy and not ostrzezenia:
+        print('walidacja: %d PNG w porzadku (rozmiar, glebia, kanaly, brak interlace)' % ile)
+    elif not bledy:
+        print('walidacja: %d PNG wczyta sie poprawnie, %d ostrzezen do przeoczenia' % (ile, len(ostrzezenia)))
+    else:
+        print('walidacja: %d bledow, %d ostrzezen' % (len(bledy), len(ostrzezenia)))
     return 1 if bledy else 0
 
 
