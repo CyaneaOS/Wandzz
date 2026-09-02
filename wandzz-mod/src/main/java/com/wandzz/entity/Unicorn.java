@@ -72,7 +72,16 @@ public class Unicorn extends PathfinderMob implements Shearable {
                 .add(Attributes.MAX_HEALTH, 14.0)
                 .add(Attributes.MOVEMENT_SPEED, 0.3)
                 .add(Attributes.ATTACK_DAMAGE, 3.0)
-                .add(Attributes.FOLLOW_RANGE, 24.0);
+                .add(Attributes.FOLLOW_RANGE, 24.0)
+                // Krok i spad: w 1.21.11 NIE ma juz setMaxUpStep() - wysokosc
+                // pokonywanego progu to atrybut (STEP_HEIGHT, patrz
+                // LivingEntity#maxUpStep). Bez tej linii jednorozec o wysokoici
+                // konia grzalem by sie na kazdym bloku gajowej polany, a wlasnie
+                // na niej sie rodzi. Wartosci 1.0 / 6.0 / 0.5 sa wziety z
+                // AbstractHorse.createAttributes() - ten sam ruch, ten sam kaloryczek.
+                .add(Attributes.STEP_HEIGHT, 1.0)
+                .add(Attributes.SAFE_FALL_DISTANCE, 6.0)
+                .add(Attributes.FALL_DAMAGE_MULTIPLIER, 0.5);
     }
 
     @Override

@@ -110,7 +110,9 @@ def tekstury_wskazane_w_javie():
     return braki
 
 
-WYMAGANY = {'item': 16, 'block': 16, 'entity': 32}    # rozmiar, ktorego sie trzymamy
+# model koniowaty (UnicornModel) ma arkusz 64x64 - tak jak vanilla dla
+# koni, wiec dla entity/ akceptujemy oba; reszta zostaje przy 32
+WYMAGANY = {'item': 16, 'block': 16, 'entity': (16, 32, 64)}
 OK_ROZMIARY = (8, 16, 32, 64, 128, 256)               # kwadraty, ktore MC lyka bez marudzenia
 # tekstury, ktore BEZ alfY beda mialy lity prostokat zamiast wycietego ksztaltu
 WYMAGA_ALFY = ('leaves', 'sapling', 'flower', 'crop', 'hair', 'feather')
@@ -155,9 +157,12 @@ def waliduj():
                 raise ValueError('typ koloru %d (dozwolone 2=RGB, 3=paleta, 4=szary+A, 6=RGBA)' % typ_k)
             if (w, h) != (h, w) or w not in OK_ROZMIARY:
                 ostrzezenia.append('%s: %dx%d, oczekuje sie kwadratu bedacego potega dwojku %s' % (rel, w, h, list(OK_ROZMIARY)))
-            elif katalog in WYMAGANY and w != WYMAGANY[katalog]:
-                ostrzezenia.append('%s: %dx%d (dla %s/ trzymamy sie %d, inaczej UV encji sie rozjedzie)'
-                                   % (rel, w, h, katalog, WYMAGANY[katalog]))
+            elif katalog in WYMAGANY:
+                dozwolone = WYMAGANY[katalog]
+                dozwolone = dozwolone if isinstance(dozwolone, tuple) else (dozwolone,)
+                if w not in dozwolone or h not in dozwolone:
+                    ostrzezenia.append('%s: %dx%d (dla %s/ trzymamy sie %s, inaczej UV encji sie rozjedzie)'
+                                       % (rel, w, h, katalog, ' lub '.join(str(d) for d in dozwolone)))
             if typ_k == 3:
                 ostrzezenia.append('%s: paleta indexed - przezroczystosc bywa gubiona, zapisz RGBA' % rel)
             if typ_k in (2, 4) and any(k in rel for k in WYMAGA_ALFY):

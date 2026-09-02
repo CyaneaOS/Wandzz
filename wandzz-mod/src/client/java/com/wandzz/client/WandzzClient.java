@@ -50,12 +50,16 @@ public class WandzzClient implements ClientModInitializer {
         ColorProviderRegistry.BLOCK.register(
                 (state, view, pos, tintIndex) -> ARCANE_LEAF_TINT, ModBlocks.ARCANE_LEAVES);
 
-        // Trojka nowych encji dzieli model (patrz FluffModel): dwe warstwy = dwe
+        // Feniks i Chronos dziela model (patrz FluffModel): dwe warstwy = dwe
         // skale, bo 1.21.11 nie ma juz scaleModel w rendererze.
         EntityModelLayerRegistry.registerModelLayer(FluffModel.LAYER, FluffModel::createBodyLayer);
         EntityModelLayerRegistry.registerModelLayer(FluffModel.LAYER_BOSS, FluffModel::createBossBodyLayer);
-        EntityRendererRegistry.register(ModEntities.UNICORN,
-                ctx -> new FluffRenderer(ctx, FluffRendererTextures.UNICORN, FluffModel.LAYER));
+        // Jednorozec ma WLASNY model (UnicornModel): geometria konia z vanilla i
+        // arkusz 64x64, a nie fluff 32x32 - inaczej siersc gracza byla by cala
+        // encja. Warstwa rejestrowana przed rendererem, bo bakeLayer() czyta
+        // zarejestrowane definicje.
+        EntityModelLayerRegistry.registerModelLayer(UnicornModel.LAYER, UnicornModel::createBodyLayer);
+        EntityRendererRegistry.register(ModEntities.UNICORN, UnicornRenderer::new);
         EntityRendererRegistry.register(ModEntities.PHOENIX,
                 ctx -> new FluffRenderer(ctx, FluffRendererTextures.PHOENIX, FluffModel.LAYER));
         EntityRendererRegistry.register(ModEntities.CHRONOS_BOSS,

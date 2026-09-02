@@ -384,6 +384,35 @@ Strzyżenie: PPM nożycami w jednorożca → 1-2 włosa, odrost po 5 minutach
 rdzeń za zwłokę karałby gracza za słuszną decyzję. API: `Shearable#shear(ServerLevel,
 SoundSource, ItemStack)` + `readyForShearing()`, wynik `InteractionResult.SUCCESS_SERVER`.
 
+**Hitbox, krok i animacje (runda 24).** Sylwetka jest koniowata, więc i pudełko musi
+być koniowate — dawne `1.0 × 1.1` z czasu, gdy koń był kulą z `FluffModel`, obcinało
+łeb i kark (celownik klikał w powietrze nad grzbietem):
+
+| co | wartość | skąd |
+|---|---|---|
+| hitbox | `.sized(1.3F, 1.5F)` | vanilla `EntityType.HORSE` to `1.3964844 × 1.6`; brane 1:1 na proporcje, 1 kratka w dół na wzrost |
+| `eyeHeight` | `1.42F` | koń ma 1.52 przy 1.6 wzrostu — utrzymujemy ten sam ułamek |
+| krok | `Attributes.STEP_HEIGHT = 1.0` | **w 1.21.11 nie ma `setMaxUpStep()`** — wysokość pokonywanego progu jest atrybutem (`LivingEntity#maxUpStep` czyta `Attributes.STEP_HEIGHT`) |
+| spad | `SAFE_FALL_DISTANCE 6.0`, `FALL_DAMAGE_MULTIPLIER 0.5` | `AbstractHorse.createAttributes()`; bez tego jednorożec rodzący się na koronie łamał sobie nogi o własny pień |
+
+`Builder#sized()` tworzy `EntityDimensions.scalable(...)`, nie `fixed(...)` — czyli
+jeżeli kiedyś dojdzie wariant młody, `ageScale` przeskaluje też hitbox, bez kodu.
+
+Animacje (`UnicornModel.setupAnim`) to liczby przepisane z `AbstractEquineModel` i
+`QuadrupedModel`: przekątne pary nóg (`cos(faza * 0.6662F)`), zamach 0.8F z przodu i
+0.5F z tyłu, mnożnik 0.2F w wodzie, klebienie ogona `cos(ageInTicks * 0.7F)` od
+tempa > 0,5, kark pompowany `cos(faza * 0.8F)` od tempa > 0,2, docinanie yaw głowy do
+±20°. Dane bierze ze `state.walkAnimationPos/Speed`, które **`LivingEntityRenderer`
+wypełnia sam** dla każdej encji `LivingEntity` — nie ma tu ani jednego pakietu, ani
+tickowego liczenia fazy po naszej stronie. Przepisane, a nie odziedziczone po
+`AbstractEquineModel`, bo ten liczy z `EquineRenderState` (rearing, jedzenie, siodło,
+`ageScale` jeźdźca) — nasz jednorożec nie jest `Horse`, więc wszystkie te pola byłyby
+zerami i model udawałby mur.
+
+Osobny model ma jeszcze jeden powód: `UnicornModel` to **arkusz 64×64** (tak jak
+`LayerDefinition.create(mesh, 64, 64)` dla koniowatych w vanilla), a `FluffModel` to
+32×32. Oskubanie chowa grzywę i ogon (`ModelPart.visible = false`), a nie cały tułów — róg zostaje, bo to kość, nie sierść.
+
 ### Feniks (`wandzz:phoenix`)
 
 Siada **na wierzchołku korony** drzewa arkanu (duch wisi *pod* koroną - dwie sylwetki na
@@ -530,8 +559,9 @@ fragment tekstu źródłowego nie jest tu przepisany.
   ale to osobny krok. Na razie `/summon wandzz:unicorn`.
 * Naturalne spawny (reguły `SpawnPlacements`) - teraz moby przychodzą wyłącznie z
   feature'ów, więc nie znikną z świata i nie zaśmiecają nocy.
-* Osobne modele/tekstury dla każdej encji: trzy moby dzielą `FluffModel` (32×32, dwie
-  skale), bo tekstury robisz sam.
+* Osobne modele/tekstury dla każdej encji: feniks i Chronos nadal dzielą `FluffModel`
+  (32×32, dwie skale), bo tekstury robisz sam; jednorożec ma od tej rundy własny
+  `UnicornModel` (geometria konia, 64×64).
 
 ## Jak to działa w grze
 
@@ -843,7 +873,41 @@ python3 wandzz-mod/tools/placeholder_textures.py          # uzupelnij braki
 python3 wandzz-mod/tools/placeholder_textures.py --check  # kontrolka: 0 = kompletne
 python3 wandzz-mod/tools/placeholder_textures.py --validate   # format kazdego PNG
 python3 wandzz-mod/tools/texture_sheet.py                 # docs/textures.png: jak widzi gra
+python3 wandzz-mod/tools/unicorn_uv.py                    # siatka UV jednorożca vs Twój arkusz
+python3 wandzz-mod/tools/unicorn_uv.py --png docs/unicorn_uv.png --skala 10
 ```
+
+**Plik `unicorn_txt.png` jest Twój i leży w `textures/entity/`.** Jednorożec nie ma już
+placeholdera — model wskazuje dokładnie tę nazwę, którą wrzuciłeś do repo, więc
+`placeholder_textures.py` nic tam nie dopisze (skrypt generuje tylko *braki*). Uwaga:
+plik wgrany przez WWW na **główny katalog repo** nie jest w zasobach moda; żeby gra go
+zobaczyła, musi leżeć w `wandzz-mod/src/main/resources/assets/wandzz/textures/entity/`.
+
+Siatka UV jest w `UnicornModel.java`, a `tools/unicorn_uv.py` ją stamtąd *parsuje*
+(drukiego, ręcznego spisu nie ma, więc nie może się rozjechać — ten sam patent co
+`gesture_set.py --sync`). Skrypt mówi, gdzie która bryla bierze piksele:
+
+| bryła (UnicornModel) | UV | na co patrzy |
+|---|---|---|
+| tułów (dwie bryły 10×10×11) | (0,14) | jasny pas w pół arkusza |
+| tułów jest rozbity, bo `10×10×22` rozwija się do paska 64×32 | — | patrz komentarz w kodzie |
+| nogi (4×11×4, jedno UV) | (23,22) | lawenda + niebieskie kopytka |
+| szyja | (13,20) | pasek pod grzywą |
+| głowa (6×5×7) | (0,18) | **dwa czarne piksele = oczy na bokach głowy**, dokładnie jak u konia |
+| uszy | (1,0) | ciemnoszare pole |
+| róg (dwie bryły) | (31,24) | różowe pole obok ogona |
+| grzywa | (30,24) | to samo różowe pole |
+| ogon (3×11×4) | (24,24) | różowe pole + 4 kratki, których jeszcze nie domalowałeś |
+| pysk | (7,7) | lawenda |
+
+Stan zmierzony: **14 z 15 brył ma wszystkie sześć ścian w zamalowanych pikselach**.
+Dziura jest jedna — góra głowy (`UP`, prostokąt (13,18)-(19,25)); bramka
+`tools/check_all.py` ma ją wpisaną jako dozwoloną (`ZNANE_DZIURY_UV = 1`), więc jak
+domalujesz te 6×7 kratek, skrypt zgłosi spadek do 0 i warto wtedy zniżyć licznik.
+`--dopasuj [--nakladaj] [--roi x0,y0-x1,y1]` potrafi przeliczyć siatkę pod *nowy*
+arkusz: wyszukuje przesunięcie o największym pokryciu, a `--roi` zamyka wyszukiwanie
+w oknie ("tu są włosy, tu kopytka"). Dwie bryle mogą brać te same piksele — to nie
+błąd, tylko oszczędność rzadkiego arkusza.
 
 `docs/textures.png` to ten sam powiekszony x8 podglad, ktory patrzy na tekstury
 dwa razy: na szachownicy (widac, gdzie jest przezroczystosc) i na szarym tle
@@ -877,7 +941,8 @@ odfiltrowania wierszy**.
 | `textures/item/arcane_stick.png`, `arcane_blessed_stick.png` | drewno duchów („Święty patyk” wygląda identycznie jak zwyczajny, dopóki nie ma swojej tekstury) | placeholder do namalowania |
 | `textures/item/arcane_resin.png` | żywica (przedmiot czysto opisowy) | placeholder |
 | `textures/block/arcane_log{,_stripped,_blessed,_top}.png`, `arcane_leaves.png`, `arcane_sapling.png` | kłoda, okorowana, poświęcona, góra pnia, liście (tint!), sadzonka | placeholder |
-| `textures/entity/{unicorn,phoenix,chronos_boss,arcane_sprite}.png` | encje | placeholder, **32×32** |
+| `textures/entity/unicorn_txt.png` | jednorożec (model koniowaty `UnicornModel`) | **Twoje, w repo** — 64×64 RGBA; placeholdera nie ma i nie będzie |
+| `textures/entity/{phoenix,chronos_boss,arcane_sprite}.png` | feniks, boss, duch arkanu | placeholder, **32×32** |
 | `textures/item/*_wand.png` (10 sztuk, te same gatunki co patyki) | różdzki zwykłe | **Twoje, w repo** |
 | `textures/item/spruce_wand.png`, `bamboo_wand.png`, `arcane_wand.png` | jodła, bambus i arcane — 3 różdzki bez grafiki | placeholder do namalowania |
 | 13 × `*_wand_magic.json` | różdzki magiczne | **świadomie bez własnej tekstury** — patrz akapit nizej |

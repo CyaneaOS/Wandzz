@@ -155,6 +155,15 @@ public class GladeFeature extends Feature<NoneFeatureConfiguration> {
                 continue;
             }
             unicorn.snapTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, random.nextFloat() * 360.0F, 0.0F);
+            // Hitbox jest SZERSZY niz jedna kratka (1.3 na 1.5, patrz ModEntities),
+            // wiec "powietrze nad liscmi" to za malo: stado urodzone w pilu
+            // zostaloby wypchniete z polany albo utknieto by w koronie. Pytamy o
+            // ksztalt kolizji samej encji - CollisionGetter#noCollision(Entity) to
+            // dzis ta proba, ktora kiedy robilo findSpawnPosWithin (niklo w 1.21.x).
+            // Odrzucone miejsce NIE zjada sztuki stada: licznik idzie dopiero nizej.
+            if (!serverLevel.noCollision(unicorn)) {
+                continue;
+            }
             level.addFreshEntity(unicorn);
             herd--;
         }

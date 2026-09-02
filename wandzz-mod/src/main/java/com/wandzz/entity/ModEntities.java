@@ -57,11 +57,17 @@ public final class ModEntities {
     public static final ResourceKey<EntityType<?>> CHRONOS_BOSS_KEY = ResourceKey.create(
             Registries.ENTITY_TYPE, Identifier.fromNamespaceAndPath(Wandzz.MOD_ID, "chronos_boss"));
 
+    // Hitbox jednorozca: 1.3 x 1.5 (vanilla HORSE to 1.3964844 x 1.6,
+    // eyeHeight 1.52 - wziete z rejestru EntityType). Nasz model to geometrycznie
+    // kon, wiec box musi miec te same proporcje: 1.1 wczesniej (kula z FluffModel)
+    // obcinata mu glowe i kark - graczy celowal w pustke nad grzbietem.
+    // Builder#sized() tworzy EntityDimensions.scalable(...), a nie fixed(...):
+    // dzieki temu ageScale (baby, jezelb kiedys dojdzie) skaluje tez hitbox.
     public static final EntityType<Unicorn> UNICORN = Registry.register(
             BuiltInRegistries.ENTITY_TYPE, UNICORN_KEY,
             EntityType.Builder.of(Unicorn::new, MobCategory.CREATURE)
-                    .sized(1.0F, 1.1F)
-                    .eyeHeight(0.9F)
+                    .sized(1.3F, 1.5F)
+                    .eyeHeight(1.42F)
                     .clientTrackingRange(8)
                     .updateInterval(3)
                     .build(UNICORN_KEY));

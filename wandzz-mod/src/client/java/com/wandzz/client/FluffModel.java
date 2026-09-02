@@ -14,7 +14,11 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
 /**
- * Kwadruped 32x32 uzywany przez wszystkie nowe encje moda.
+ * Kwadruped 32x32 uzywany przez feniksa i Chronosa.
+ *
+ * <p>Jednorozec NIE jest tu rysowany (ma {@code UnicornModel} na arkuszu 64x64):
+ * ten model jest kula z czterema nogami i przy koniowatej sylwetce zostalby
+ * bez nog, bez ogona i bez rogu.
  *
  * Rozklad UV (kontrakt na tekstury {@code wandzz:textures/entity/<mob>.png};
  * kazda MU SI miec 32x32 - przy innej wielkosci gra skaluje UV i ksztalt sie
@@ -101,9 +105,11 @@ public class FluffModel extends EntityModel<FluffRenderState> {
     public void setupAnim(final FluffRenderState state) {
         super.setupAnim(state);
 
-        // chod liczony z ageInTicks: wlasonie LivingEntityRenderState ma gotowe
-        // walking-animation tylko dla encji z wlasnym stanem (CowRenderState...),
-        // a my stan dzielimy miedzy trzy typy - stad wlasna sinusoida
+        // Wlasna sinusoida, choc LivingEntityRenderState MA walkAnimationPos/Speed
+        // (wypelnia je LivingEntityRenderer.extractRenderState - patrz
+        // UnicornModel, ktory z nich korzysta). Zostaje sinus, bo te dwa modele
+        // rzuza sie w powietrzu: cykl "nogi w bloto" nie ma tu sensu, a
+        // walkAnimationSpeed u feniksa i tak spada do zera przy lataniu.
         final float swing = Mth.sin(state.ageInTicks * 0.35F) * 0.55F;
         this.legFrontLeft.xRot = swing;
         this.legFrontRight.xRot = -swing;

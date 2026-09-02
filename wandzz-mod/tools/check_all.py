@@ -125,8 +125,8 @@ FABRIC_WTRZYNIONE = {
     'hasAttached', 'removeAttached', 'getOrCreateAttached',
 }
 DEKLARACJA = re.compile(
-    r'\b(?:public|protected|private|static|default)\b[\w<>\[\],.\s=]*?\b(\w+)\s*[(=;]'
-    r'|^\s{2,8}[\w<>\[\],.]+\s+(\w+)\s*\([^)]*\)\s*[;{]', re.M)
+    r'\b(?:public|protected|private|static|default)\b[\w<>\[\],.\s=@]*?\b(\w+)\s*[(=;]'
+    r'|^\s{2,8}[\w<>\[\],.@]+\s+(\w+)\s*\([^)]*\)\s*[;{]', re.M)
 
 
 def identyfikatory_zrzutu(mcsrc):
@@ -149,7 +149,12 @@ def identyfikatory_zrzutu(mcsrc):
                                   errors='replace').read())
             for m in DEKLARACJA.finditer(txt):
                 znane.add(m.group(1) or m.group(2))
-            znane.update(re.findall(r'^\s{2,8}([A-Z][A-Z0-9_]{2,})\s*[=;(,]', txt, re.M))
+            # stale: "PASS," (stal enuma) oraz "Pass PASS = new Pass();" (pole
+            # interfejsu sealed - InteractionResult jest wlasnie takie, przez co
+            # pierwsza wersja tej bramki zglosila "PASS nie istnieje"). Oba ksztalty
+            # sa bez modyfikatora, wiec DEKLARACJA ich nie widzi.
+            znane.update(re.findall(
+                r'^\s{0,8}(?:[\w<>\[\],.]+[ \t]+)?([A-Z][A-Z0-9_]{2,})[ \t]*[=;,()]', txt, re.M))
     return znane
 
 
@@ -180,8 +185,14 @@ def skan_api(pliki, mcsrc, bledy):
             kandydaci.setdefault(m.group(2), set()).add(m.group(1))
         zmienna = {n: typ for n, t in kandydaci.items() if len(t) == 1
                    for typ in t if typ in pelne}
-        for dostep in re.finditer(r'\b([a-zA-Z_]\w*)\s*\.\s*([a-z_]\w*)\b(?!\s*\.)', txt):
-            odbior, clon = dostep.group(1), dostep.group(2)
+        # stale w CONSTANT_CASE (PartPose.ZERO, CubeDeformation.NONE,
+        # SoundEvents.HORSE_AMBIENT) dolaczone w rundzie 24: wczesniej skan patrzyl
+        # tylko na male nazwy, a wlasnie tam siedza wymyslane API.
+        for dostep in re.finditer(
+                r'\b([a-zA-Z_]\w*)\s*\.\s*(?:([a-z_]\w*)|([A-Z][A-Z0-9_]{2,}))\b(?!\s*\.)',
+                txt):
+            odbior = dostep.group(1)
+            clon = dostep.group(2) or dostep.group(3)
             if odbior not in zmienna and odbior not in pelne:
                 continue
             if clon in ('class', 'this', 'super'):
@@ -262,6 +273,12 @@ def uruchom(bledy, argv, opis):
 
 
 def main(argv=None):
+    # Wiadoma, akceptowana dziura w siatce UV jednorozca: gorna twarz glowy
+    # (UP) trafia w (13,18)-(19,25) arkusza gracza, ktore ten jeszcze nie
+    # zamalowal. To wierzch czaszki pod grzywa i rogiem - w grze prawie niewidoczny.
+    # Zmniejsz do 0, gdy te 6x7 px zostanie domalowane (patrz README, "Jednorozec").
+    ZNANE_DZIURY_UV = 1
+
     parser = argparse.ArgumentParser(description='bramka jakosci moda Wandzz')
     parser.add_argument('--mcsrc', default='/home/user/mcsrc',
                         help='korzen zrzutu zrodel Mojang (git clone ... -b main)')
@@ -282,6 +299,27 @@ def main(argv=None):
                     'placeholder_textures.py --check')
     sync = uruchom(bledy, [os.path.join(HERE, 'gesture_set.py'), '--sync'],
                    'gesture_set.py --sync')
+    uv_wynik = uruchom(bledy, [os.path.join(HERE, 'unicorn_uv.py'), '--json'],
+                       'unicorn_uv.py --json')
+    uv_txt = uv_wynik[0] if uv_wynik else ''
+    sygnal = 'pominiete (brak parsowania)'
+    if uv_txt and uv_txt.startswith('{'):
+        try:
+            uv = json.loads(uv_txt)
+            if uv['arkusz'] and uv['arkusz'] != uv['deklarowany']:
+                bledy.append('unicorn_uv: LayerDefinition mowi %s, a plik ma %s - MC '
+                             'przeskaluje UV' % (uv['deklarowany'], uv['arkusz']))
+            if uv['boxes'] < 10:
+                bledy.append('unicorn_uv: tylko %d bryl wyciagnietych z UnicornModel.java '
+                             '- regex sie rozjechal z kodem (addBox musi brac literaly)'
+                             % uv['boxes'])
+            if uv['holey'] > ZNANE_DZIURY_UV:
+                bledy.append('unicorn_uv: %d bryl ma twarze w przezroczystosci (wolno %d): %s'
+                             % (uv['holey'], ZNANE_DZIURY_UV, uv['holes']))
+            sygnal = '%d bryl, %d dziurawych (wolno %d)' % (
+                uv['boxes'], uv['holey'], ZNANE_DZIURY_UV)
+        except json.JSONDecodeError as e:
+            bledy.append('unicorn_uv --json: nie dalo sie sparsowac (%s)' % e)
     print('%d .java | %d importow (%d pakietow bibliotecznych poza zrzutem) | '
           '%d JSON | %d kluczy lang | %d czarow (register: %d)' %
           (n_java, n_import, n_skip, n_json, n_lang, n_czary, n_reg))
@@ -292,6 +330,7 @@ def main(argv=None):
     print('  tekstury:', walid[0])
     print('  palete:', check[0])
     print('  gesty:', sync[0])
+    print('  UV jednorozca:', sygnal)
     for b in bledy[:20]:
         print('  FAIL', b)
     if len(bledy) > 20:
