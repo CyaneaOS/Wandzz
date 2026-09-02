@@ -15,12 +15,13 @@ Mysz -> MouseInput -> CastingData (List<Point>) -> $1 Recognizer
   Recognizer** (Wobbrock/Wilson/Li 2007): resample → rotate → scale+translate →
   golden-section search po kącie obrotu. Napisana od zera na podstawie opisu
   algorytmu, nie skopiowana z żadnego repozytorium.
-- **`spell/`** – interfejs `Spell`, rejestr `SpellRegistry` oraz **12 zaklęć**:
-  `StrikeSpell`, `BreakBlockSpell`, `TorchSpell`, `LeapSpell` (lvl 1),
-  `FireballSpell`, `HealSpell`, `RevealSpell` (lvl 2),
-  `TeleportSpell`, `BombSpell`, `DragonBreathSpell`, `OpenGateSpell`,
-  `InvisibilitySpell` (lvl 3 – dostępne dla
-  **każdego** core'a lvl 3+, nie tylko Dragon Breath Core, zgodnie z dokumentem). `Spell#canCast` pozwala
+- **`spell/`** – interfejs `Spell`, rejestr `SpellRegistry` oraz **18 zaklęć**:
+  lvl 1: `StrikeSpell`, `BreakBlockSpell`, `TorchSpell`, `LeapSpell`, `LumosSpell`,
+  `NoxSpell`; lvl 2: `FireballSpell`, `HealSpell`, `RevealSpell`, `AccioSpell`,
+  `WingardiumSpell`, `ProtegoSpell`; lvl 3: `TeleportSpell`, `BombSpell`,
+  `DragonBreathSpell`, `OpenGateSpell`, `InvisibilitySpell`, `ExpelliarmusSpell`
+  (lvl 3+ jest dostępne dla **każdego** core'a na swoim poziomie, nie tylko dla
+  Dragon Breath Core, zgodnie z dokumentem). `Spell#canCast` pozwala
   odmówić *przed* pobraniem many, gdy nie ma celu (patrz „Przejście do Arkanum“).
 - **`core/CoreType`** – 16 typów core'ów z poziomami. W pełni opisane w dokumencie
   (`FEATHER` lvl 1, `DRAGON_BREATH` lvl 3) są gotowe; pozostałe 13 to sloty do
@@ -221,6 +222,7 @@ krok po kroku `DollarOneRecognizer.java`: resampling do 64 punktów, pudełko
 `score = 1 - d/176,78`):
 
 ```
+python3 wandzz-mod/tools/check_all.py               # brama: ASCII, importy, JSON, lang, tekstury, gesty
 python3 wandzz-mod/tools/gesture_eval.py            # 4 modele reki, 3 koszyki
 python3 wandzz-mod/tools/gesture_set.py             # model „gracz dokańcza gest”
 python3 wandzz-mod/tools/gesture_sweep.py            # przeszukanie par (skok, brama)
@@ -234,11 +236,11 @@ zostaje narysowane - najczęstszy realny błąd), **drżąca mysz** (dużo punkt
 dryf brązowski ~3× większy) i **rysik** (dużo punktów, małe drgnienia). Na
 każdym modelu losowa skala 0,55-1,5 i obrót ±20°.
 
-| zestaw | koszyk lvl 1 | koszyk lvl 2 | pełny (12) | złe rzucenia |
+| zestaw | koszyk lvl 1 | koszyk lvl 2 | pełny (18) | złe rzucenia |
 |---|---|---|---|---|
 | runda 16 (świeczka, łuk, gwiazda) | 100% | 90,5% | 92,4% | **do 100% dla `heal`, `fireball`, `dragon_breath` w modelu „urwany ogon”** |
-| ten (T, ptaszek, amortyzator, trójkąt, N, krzyż, schody) | **100%** | **96,8%** | **95,3%** | **0,0%** |
-| ten, model „dokańczony gest” (`gesture_set.py`) | 100% | 100% | 98,1% | 0,0% |
+| ten (+ krzyż, schody, strzała, skreślenie, mur, daszek, Y, 3 kreski) | **100%** | **97,9%** | **96,8%** | **0,0%** |
+| ten, model „dokańczony gest” (`gesture_set.py`) | 100% | 98,8% | 96,7% | 0,0% |
 
 Dwie zapory, które trzymają te liczby, zostały z poprzedniej rundy i nadal
 robią robotę:
@@ -246,7 +248,7 @@ robią robotę:
 1. **Koszyk.** `CastingScreen#castableIds` czyta komponent `wandzz:wand_data` z
    trzymanej różdżki (serwer i tak go synchronizuje) i rozpoznaje **tylko wśród
    czarów, które twoje rdzenie udostępniają** - ten sam warunek
-   `Spell#isProvidedBy`, który sprawdza serwer. 12 kształtów walczy ze sobą;
+   `Spell#isProvidedBy`, który sprawdza serwer. 18 kształtów walczy ze sobą;
    4 nie walczą.
 2. **Margines.** `DollarOneRecognizer.AMBIGUITY_MARGIN = 0,035`: jeśli lider
    wyprzedza wicelidera o mniej, gest jest **odrzucony** z komunikatem
@@ -257,7 +259,7 @@ robią robotę:
 Obniżony próg ze zgrania **nie** ignoruje marginesu - zgranie pomaga na drżenie
 ręki, nie na niejednoznaczność.
 
-### Co rysować (12 czarów)
+### Co rysować (18 czarów)
 
 Ten sam rysunek, który widzi gracz, jest w [`docs/gestures.png`](docs/gestures.png)
 (czerwona kropka = początek, niebieska = koniec). Obrazek jest *generowany* ze
@@ -281,6 +283,12 @@ python3 wandzz-mod/tools/gesture_sheet.py     # nadpisuje docs/gestures.png
 | `bomb` | romb z kreską w środku | 6 |
 | `reveal` | **krzyż-celownik**: pion w dół, przejazd do lewej, poziomka w prawo | 3 |
 | `invisibility` | **schody w dół**: trzy stopnie, coraz niżej, bez zawracania | 5 |
+| `lumos` | **strzała w górę**: trzonek i dwa ramiona grotu | 4 |
+| `nox` | **skreślone X**: krzyż plus kreska przez niego | 5 |
+| `accio` | **miska z uszkiem**: trzy boki prostokąta i przekątna | 4 |
+| `wingardium_leviosa` | **daszek nad podłogą**: dwa ramiona w górę i kreska u dołu | 4 |
+| `protego` | **mur z trzech kresek**: trzy poziomy kreski, każda krótsza | 6 |
+| `expelliarmus` | **długie Y**: dwa ramiona w górę i jedna noga w dół | 4 |
 
 Kształty są do siebie niepodobne *z konstrukcji*, nie z dekoracji: ptaszek i
 pudło mają nachodzące na siebie odcinki, T i N mają prostopadłe ramiona,
@@ -288,7 +296,7 @@ amortyzator i trójkąt mają zamknięty obwód (albo dwie wysokie nogi), kółk
 jedynymi gładkimi krzywiznami, a dwa kwadraty są jedynym kształtem z dwoma
 oddzielnymi obwodami. To właśnie te cechy `$1` widzi po normalizacji.
 
-### Czego już nie próbować (trzy ofiary, żeby nie powtarzać)
+### Czego już nie próbować (cztery ofiary, żeby nie powtarzać)
 
 * **Kółko z przerwą (300°) jako `heal`.** Brzmi mądrze („skoro mysz nie domyka,
   to niech szablon też nie”), w pomiarze gorsze: dla *dokańczonych* kółek
@@ -300,6 +308,22 @@ oddzielnymi obwodami. To właśnie te cechy `$1` widzi po normalizacji.
 * **Litera „X” jako `bomb`.** Po ucięciu ogona zostaje z niej „V”, czyli dawne
   `strike`; romb z kreską ma pięć segmentów i zamknięty obwód, więc nie ma
   z czym go pomylić.
+* **Sam „X” jako `nox`.** Ten akurat wpuściliśmy, ale dopiero z trzecią kreską:
+  krzyż `reveal` i X różni jeden obrót o 45°, a ±45° to dokładnie zakres, w
+  jakim $1 szuka obrotu dla gestów otwartych — gołe X kradło `reveal`. Kreska
+  przez krzyż („skreślenie światła”) wynosi liczbę segmentów z 4 do 5 i nie
+  pozwala żadnemu obrotowi domknąć różnicy.
+* **Każdy WYPUKŁY, domknięty obrys jako `protego`** (tarcza herbowa, pentagon,
+  „dom z daszkiem”). Wszystkie trzy wygrywały screening 18-próbowy, a przy
+  200 próbach na model tarcza i tak kradła 1/800 kółko `heal` — bo $1 nie widzi
+  „tarczy”, tylko sekwencję kątów, a wypukły pięciokąt po zaokrągleniu naroży
+  przez mysz jest murowanym kandydatem na koło. Dlatego `protego` to dziś trzy
+  kreski (otwarty, wklęsły kształt, z którego koła nie da się złożyć), a `nox`
+  ma dodatkową kreskę przez X: bez niej X jest obrotem krzyża `reveal` o 45°,
+  a `±45°` to dokładnie zakres, w jakim $1 szuka obrotu dla kształtów otwartych.
+  **Wniosek praktyczny: screening z małą liczbą prób nie istnieje dla kolizji
+  rzadszych niż ~2%; ostateczna bramka to `gesture_eval.py` (40) plus 200 prób
+  na parę.**
 
 Jedna rzecz, której nie naprawi żaden kształt: jeśli ktoś narysuje *pusty*
 daszek „˄” (bez podstawy płomienia), to nie jest żaden gest z tej listy -
@@ -406,7 +430,7 @@ tego cała ścieżka "poświęcone patyki → magiczna różdżka" wysycha po pi
 drzewa, a mapa drzew w `SavedData` jest w tym projekcie zabroniona (wymagałaby
 domkniętego `DataFixTypes`), więc skan jest celowo bezstanowy.
 
-### Dwa najnowsze czary (jest ich 12)
+### Najnowsza partia czarów (jest ich 18)
 
 | czar | id | koszt | gest | kto udostępnia |
 |---|---|---|---|---|
@@ -443,6 +467,60 @@ dwóch zaklęć.
 odmawia, gdy pasek jest pełny i tarczy brak - żeby nie płacić 14 many za czar, który nic
 nie robi. `leap` zeruje `fallDistance` (`resetFallDistance()`), bo kara za lot byłaby
 dziwną ceną za ratunek.
+
+### Partia inkantacji (lumos, nox, accio, wingardium, protego, expelliarmus)
+
+| czar | id | koszt | gest | kto udostępnia | co robi |
+|---|---|---|---|---|---|
+| Lumos | `lumos` | 4 | strzała w górę | każdy lvl ≥ 1 | kładzie `minecraft:light` (15/15) na ściance, na którą patrzysz |
+| Nox | `nox` | 3 | skreślone X | każdy lvl ≥ 1 | zdejmuje wszystkie takie światła w 12 kr. |
+| Accio | `accio` | 8 | miska z uszkiem | każdy lvl ≥ 2 | leżące przedmioty z 24 kr. lecą do Ciebie |
+| Wingardium Leviosa | `wingardium_leviosa` | 14 | daszek nad podłogą | każdy lvl ≥ 2 | unosi cel na 30 ticków + miękkie lądowanie 260 ticków |
+| Protego | `protego` | 12 | mur z trzech kresek | każdy lvl ≥ 2 | `RESISTANCE` 1 + `ABSORPTION` 1 na 12 s, `FIRE_RESISTANCE` na 4 s |
+| Expelliarmus | `expelliarmus` | 20 | długie Y | każdy lvl ≥ 3 | odrzut + wypada trzymany przedmiot (nie na graczy) |
+
+Skąd taka mechanika, a nie „ładniejsza”:
+
+* **`lumos` to blok, nie efekt.** Vanilla nie ma efektu dającego światło, a
+  `minecraft:light` jest blokiem bez kolizji, `replaceable`, o twardości −1
+  (nie da się go wydobyc w survivalu). Światło widać u każdego klienta, bo
+ stawienie bloku to zwykły update chunka — zero własnych pakietów, zero kodu
+  po stronie klienta. **Właśnie dlatego istnieje `nox`**: bez drugiego czaru
+  każde Lumos byłoby wiecznym śmieciem w świecie (te światła są
+  `replaceable`, więc gracz zamiata je sam, kładąc tam jakikolwiek blok).
+* **`accio` nie wkłada przedmiotów do ekwipunku sią.** Każdy `ItemEntity` z 24
+  kratek dostaje pęd w stronę klatki piersiowej rzucającego, a zbiera go
+  vanilla: pełen pasek niczego nie kasuje, stacki z komponentami idą normalną
+  ścieżką, a świeży drop (10 ticków opóźnienia_pickupu) wpada chwilę później
+  zamiast być wyciągany z ręki innego gracza. Liczenie wolnych slotów i
+  resztek w stackach to więcej kodu niż ten impuls jest wart.
+* **`wingardium_leviosa` to para efektów.** Samo `LEVITATION` to 30 kratek w
+  górę i śmiertelny spadek; `SLOW_FALLING` po nim robi windę. Uniesienie jest
+  celowo krótkie (1,5 s), żeby ofiara nie wleciała w chmury ani w korony drzew
+  — „zgubiony gracz na liściach” to dokładnie ten błąd, który na serwerach
+  nazywa się zgłoszeniem. Działa też na graczy, bo nie może ich zabić.
+* **`protego` nie odejmuje obrażeń własnym hakiem.** Własny „bloker” wyciąłby
+  cios razem ze wszystkim, co vanilla przy nim liczy (crit, knockback, aggro,
+  `GameEvent`, postępy, śmierć), a przy okazji byłby mixinem w kod, który
+  zmienia się w każdej wersji. Dwa efekty wchodzą w te same miejsca z zewnątrz.
+  Uwaga dla tych, którzy pamiętają starsze wersje: w 1.21.11 to
+  `MobEffects.RESISTANCE`, a `DAMAGE_RESISTANCE` już nie istnieje.
+* **`expelliarmus` nie rozbraja graczy** — świadomie, jedna linia warunku
+  (`cel instanceof ServerPlayer`) i komunikat `wandzz.spell.expelliarmus_no_player`.
+  Wypadający z ręki przedmiot to jedyny efekt tego moda, który potrafi zniszczyć
+  graczowi rozgrywkę (klucz, mapa, narzędzie nie do podniesienia pod ostrzałem)
+  i którego nie da się cofnąć. Łup leci na ziemię przy *ofierze*, nie do
+  ekwipunku rzucającego — inaczej byłaby to kradzież z 20 punktami many jako
+  ceną wejścia.
+
+**Czego w tej partii nie ma i dlaczego**: trzech klątw niepuszczalnych
+(Avada Kedavra, Crucio, Imperio) — instant-kill, tortura i zniewolenie gracza
+to nie są „czary do zabawy”, tylko narzędzia do wyganiania ludzi z serwera.
+Nie ma też Patronusa (własna encja plus renderer, czyli cały nowy byt dla
+jednego efektu) ani czarów zmieniających blok w inny (`Reparo`,
+transfiguracja) — to już nie rzucanie czaru, tylko edycja świata z uprawnieniami
+operatora. Same nazwy to łacińskie inkantacje jako jednowyrazowe słowa; żaden
+fragment tekstu źródłowego nie jest tu przepisany.
 
 ### Co jeszcze nie jest zrobione (żeby nie szukać po omacku)
 
@@ -652,8 +730,21 @@ o `Spell#canCast` przed płatnością.
 żadnych współrzędnych tu nie przepisujemy. Trzy sposoby, żeby je zobaczyć:
 
 * **księga zaklęć** w grze (diagram pod opisem czaru) – rysuje te same punkty,
-* `docs/gestures.png` – arkusz 12 kształtów, **generowany** przez
+* `docs/gestures.png` – arkusz 18 kształtów, **generowany** przez
   `python3 wandzz-mod/tools/gesture_sheet.py`, więc nie może się rozjechać,
+* `python3 wandzz-mod/tools/check_all.py` – brama przed `git push`: pliki `.java`
+  w ASCII i ze zbilansowanymi nawiasami, każdy `import` rozwiązywalny, każdy JSON
+  parsowalny, lang w parity z `.name`/`.desc` dla wszystkich 18 czarów i z
+  licznikiem `register()` vs `spell/impl/`, walidacja tekstur (bez dotykania
+  Twoich plików) i `--sync` gestów.
+* `python3 wandzz-mod/tools/check_all.py --api-scan $(find src/main/java -name '*.java')`
+  – dodatkowo sprawdza pisownię członów Minecrafta, które wołamy, przeciw zrzutowi
+  źródeł 1.21.11 (`--mcsrc`, domyślnie `/home/user/mcsrc`). To ten test złapał
+  `hit.getFace()` (nazwa Yarnowska) tam, gdzie w Mojang-mappings jest
+  `hit.getDirection()` — `./gradlew build` powiedziałby o tym dopiero na Twoim
+  dysku. Świadomie nie jest w domyślnej bramce: to heurystyka regexowa, bez
+  modelu zasięgów, więc nadaje się do przeglądania *nowych* plików, nie do
+  blokowania pusha.
 * `python3 wandzz-mod/tools/gesture_eval.py --sync` – sprawdza, że Python i Java
   mają co do punktu te same kształty (używane przy każdej zmianie gestu).
 

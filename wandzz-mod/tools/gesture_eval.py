@@ -56,11 +56,15 @@ JAVA_METHODS = {
     'dragon_breath': 'breathWave', 'open_gate': 'barredGateStroke',
     'teleport': 'twinSquares', 'bomb': 'diamondTick',
     'reveal': 'revealStroke', 'invisible': 'invisibilityStroke',
+    'lumos': 'lumosStroke', 'nox': 'noxStroke', 'accio': 'accioStroke',
+    'wingardium_leviosa': 'wingardiumStroke', 'protego': 'protegoStroke',
+    'expelliarmus': 'expelliarmusStroke',
 }
 # Spell#requiredLevel - tu tylko po to, zeby zbudowac koszyki jak w grze.
 LEVEL = {'strike': 1, 'break_block': 1, 'torch': 1, 'leap': 1, 'heal': 2,
          'fireball': 2, 'dragon_breath': 2, 'open_gate': 2, 'teleport': 3, 'bomb': 3,
-         'reveal': 2, 'invisible': 3}
+         'reveal': 2, 'invisible': 3, 'lumos': 1, 'nox': 1, 'accio': 2,
+         'wingardium_leviosa': 2, 'protego': 2, 'expelliarmus': 3}
 
 SHAPES = {
     'strike':        [(-100, 60), (-20, 60), (60, -80), (100, -20)],
@@ -77,6 +81,12 @@ SHAPES = {
     # dwie nowe (runda 21) - dobrane POMIAREM, nie gustem; patrz GestureTemplates
     'reveal':        [(0, -100), (0, 100), (-100, 0), (100, 0)],
     'invisible':     [(-110, -70), (-40, -70), (-40, -10), (20, -10), (20, 50), (90, 50)],
+    'lumos':         [(0, 110), (0, -70), (-55, -5), (0, -70), (55, -5)],
+    'nox':           [(-90, -90), (90, 90), (-90, 90), (90, -90), (-40, -40), (40, 40)],
+    'accio':         [(-90, -90), (-90, 90), (90, 90), (90, -90), (-90, 90)],
+    'wingardium_leviosa': [(-100, 80), (0, -80), (100, 80), (-60, 80), (60, 80)],
+    'protego':       [(-100, -80), (100, -80), (-70, 0), (70, 0), (-40, 80), (40, 80)],
+    'expelliarmus':  [(-90, -90), (0, 0), (90, -90), (0, 0), (0, 110)],
 }
 # Zestaw z rundy 16 (swieczka / luk / gwiazda) - pozostaje jako porownanie,
 # zeby nie dac sie ponownie skusic "ladniejszym" ksztaltom.

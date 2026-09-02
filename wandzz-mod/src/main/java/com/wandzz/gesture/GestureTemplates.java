@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Ksztalty gestow dla 12 zaklec moda.
+ * Ksztalty gestow dla 18 zaklec moda.
  *
  * <p>TO NIE JEST zbior "ladnych" ikon. {@code $1} jest nieczuly na obrot, skale i
  * predkosc rysowania, a po normalizacji z ksztaltu zostaja WYLACZNIE kolejnosc
@@ -32,16 +32,19 @@ import java.util.List;
  * reki (od rysika do drzacej myszy, w tym "urwany ogon"), trzy koszyki dostepnych
  * czarow, 40 prob na czar:
  * <pre>
- *   koszyk lvl 1 (4 czary)             100.0% trafien, 0.0% trafien w obcy czar
- *   koszyk lvl 2 (9 czarow)             96.8% trafien, 0.0% trafien w obcy czar
- *   pelny koszyk (12 czarow)            95.3% trafien, 0.0% trafien w obcy czar
- *   RAZEM                               96.6% trafien, 0.0% trafien w obcy czar
+ *   koszyk lvl 1 (6 czarow)             100.0% trafien, 0.0% trafien w obcy czar
+ *   koszyk lvl 2 (14 czarow)             97.9% trafien, 0.0% trafien w obcy czar
+ *   pelny koszyk (18 czarow)             96.8% trafien, 0.0% trafien w obcy czar
+ *   RAZEM                               97.7% trafien, 0.0% trafien w obcy czar
  * </pre>
  *
- * <p>Dwa najnowsze ksztalty (krzyz-celownik i schody w dol) weszly do zestawu
- * BEZ zadnego kompromisu: w kazdym z czterech modelow reki trafiaja w siebie w
- * 100% prob, a w zadnym kierunku nie kradna niczyjego czarza - patrz wpisy
- * {@link #revealStroke()} i {@link #invisibilityStroke()}.
+ * <p>Trzy najnowsze pary (krzyz + schody, strzala + skreslenie, mur + Y) weszly
+ * do zestawu po tym samym tescie. Uwaga dla nastepcy: kandydat na gest musial
+ * tu przejdz DWA progi, nie jeden. Screening z 18 probami na czar przepuscil tarcze
+ * herbowe dla {@code protego}, a ta przy 200 probach na ciasnala 1/800 kolo
+ * {@code heal} (18 ksztaltow w koszyku = 0,1%). Dopiero trzy przesuniete kreski
+ * daja ksztalt otwarty i waklesly, z ktorego kolka uklad nie da sie zlozyc.
+ * Pelna weryfikacja: {@code gesture_eval.py} (40 prob) plus 200 prob na pare.
  * Ten sam test na zestawie z poprzedniej rundy (swieczka, luk, gwiazda):
  * 93.1% trafien, ale 40-100% RZUCANYCH ZLYCH CZAROW dla leczenia, kuli ognia i
  * oddechu smoka w modelu "urwany ogon". To byl dokladnie blad zgloszony przez
@@ -245,6 +248,126 @@ public final class GestureTemplates {
                 new Point(-175, 60), new Point(-175, -60), new Point(-65, -60), new Point(-65, 60),
                 new Point(65, 60),
                 new Point(65, -60), new Point(175, -60), new Point(175, 60), new Point(65, 60)
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // partia "_potterowska" (6 czarow) - ksztalty dobrane tym samym pomiarem
+    // ------------------------------------------------------------------
+
+    /**
+     * Lumos: strzala w gore - trzonek i dwa ramiona grotu, cztery segmenty,
+     * dwa zawroty. "Wnosi swiatlo do gory".
+     *
+     * <p>Zostala wybrana SPOD pomiaru: pochodnia-z-podstawka (T z kreska w dol)
+     * kradla 8,3% prob pochodni, a "krzyzyk krotki" nie dawal sie rozpoznac
+     * (27,8% trafien) - za malo mas, zeby mysz go nie mylil z ptaszkiem.
+     */
+    public static List<Point> lumosStroke() {
+        return List.of(
+                new Point(0, 110),
+                new Point(0, -70),
+                new Point(-55, -5),
+                new Point(0, -70),
+                new Point(55, -5)
+        );
+    }
+
+    /**
+     * Nox: skreslone X - dwa ramiona na krzyz i kreska przez nie, piec
+     * segmentow. "Zgaszone, skreslone".
+     *
+     * <p>Uwaga na puapke, ktora wyeliminowalismy pomiarem: samo X (bez kreski)
+     * jest dla $1 obrotem krzyza-celownika {@link #revealStroke()} o 45 stopni.
+     * $1 szuka obrotu w zakresie +/-45 stopni dla ksztaltow otwartych, wiec
+     * "X" i "+" to ten sam gest - stad ta dodatkowa kreska, ktora psuje
+     * symetrie i nie pozwala dwom czarom podkradac sie nawzajem.
+     */
+    public static List<Point> noxStroke() {
+        return List.of(
+                new Point(-90, -90),
+                new Point(90, 90),
+                new Point(-90, 90),
+                new Point(90, -90),
+                new Point(-40, -40),
+                new Point(40, 40)
+        );
+    }
+
+    /**
+     * Accio: "miska z uszkiem" - trzy boki prostokata i przekatna w srodku,
+     * cztery segmenty. Ksztalt "sciaga" punkty do jednego roda.
+     *
+     * <p>Kandydaci odrzuceni pomiarem: "lejek" (kradnie 4,4% - za blisko
+     * amortyzatora skoku), "hak z kotwica" (55,6% trafien, bo ogon hakow jest
+     * dla $1 szumem).
+     */
+    public static List<Point> accioStroke() {
+        return List.of(
+                new Point(-90, -90),
+                new Point(-90, 90),
+                new Point(90, 90),
+                new Point(90, -90),
+                new Point(-90, 90)
+        );
+    }
+
+    /**
+     * Wingardium Leviosa: daszek nad podloga - dwa ramiona w gore i kreska
+     * u dolu, cztery segmenty. "Unies znad ziemi".
+     *
+     * <p>Ten sam daszek byl kiedys ODRZUCONY jako brama (patrz
+     * {@link #barredGateStroke()}), i slusznie - jako LUK podkradal kolo. Tutaj
+     * jest to lamany dach z podstawa (ostro, bez zakrzywienia), wiec ksztalt
+     * zamyka sie w sobie i nie ma "polowy kola" w srodku.
+     */
+    public static List<Point> wingardiumStroke() {
+        return List.of(
+                new Point(-100, 80),
+                new Point(0, -80),
+                new Point(100, 80),
+                new Point(-60, 80),
+                new Point(60, 80)
+        );
+    }
+
+    /**
+     * Expelliarmus: dlngie Y - dwa ramiona w gore i dluga noga w dol, cztery
+     * segmenty, jedno samoprzeciecie. "Wyrzuca z reki na boki".
+     */
+    public static List<Point> expelliarmusStroke() {
+        return List.of(
+                new Point(-90, -90),
+                new Point(0, 0),
+                new Point(90, -90),
+                new Point(0, 0),
+                new Point(0, 110)
+        );
+    }
+
+    /**
+     * Protego: mur z trzech kratek - poziome balki, kazdy krotszy i przesuniety,
+     * piec segmentow, zadnego domkniecia.
+     *
+     * <p>ZMIANA WYGROWANA POMIAREM, nie gustem. Pierwotny ksztalt (tarcza
+     * herbowa: gora, dwa boki, szpic na dole) wygrywal wszystkie testy screeningowe
+     * 18-probowe, a i tak podkradal {@link #healStroke()} - przy 200 probach na
+     * model wyszlo 1/800 trafien kola w tarcze. Dlaczego: kazdy CONVEX, domkniety
+     * obwod o pieciu wierzcholkach jest po zaokragleniu przez mysz bliski kole, a
+     * $1 nie widzi "tarczy", tylko sekwencje katow. Dlatego protego jest teraz
+     * ksztaltem otwartym i wkleslym z natury - kola nie da sie z niego zlozyc.
+     *
+     * <p>To samo dotyczy "domu" (pentagon z daszkiem) i "muru z blankami" - oba
+     * odpada na tym samym pomiarze.
+     */
+    public static List<Point> protegoStroke() {
+        return List.of(
+                new Point(-100, -80),
+                new Point(100, -80),
+                new Point(-70, 0),
+                new Point(70, 0),
+                new Point(-40, 80),
+                new Point(40, 80)
         );
     }
 

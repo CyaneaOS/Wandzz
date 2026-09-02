@@ -42,5 +42,17 @@ public final class Spells {
         // dwie niezalezne warstwy renderowania.
         SpellRegistry.register(new RevealSpell(), GestureTemplates.revealStroke());
         SpellRegistry.register(new InvisibilitySpell(), GestureTemplates.invisibilityStroke());
+
+        // Partia inspirowana inkantacjami z uniwersum mlodego czarodzieja: same
+        // lacinskie zaklecia jako nazwy, wlasna mechanika i wlasne opisy (nic nie
+        // jest przepisane z zadnego tekstu). Swiadomie BEZ klatw niepuszczalnych
+        // (Avada Kedavra / Crucio / Imperio): instant-kill i zniewolenie gracza
+        // to nie zaklecie, tylko zgloszenie na serwerze.
+        SpellRegistry.register(new LumosSpell(), GestureTemplates.lumosStroke());
+        SpellRegistry.register(new NoxSpell(), GestureTemplates.noxStroke());
+        SpellRegistry.register(new AccioSpell(), GestureTemplates.accioStroke());
+        SpellRegistry.register(new WingardiumSpell(), GestureTemplates.wingardiumStroke());
+        SpellRegistry.register(new ProtegoSpell(), GestureTemplates.protegoStroke());
+        SpellRegistry.register(new ExpelliarmusSpell(), GestureTemplates.expelliarmusStroke());
     }
 }

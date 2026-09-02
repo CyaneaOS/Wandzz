@@ -25,7 +25,8 @@ REPO = pathlib.Path(__file__).resolve().parents[1]
 
 KSZTALTY = ['strike', 'break_block', 'torch', 'leap', 'heal',
             'fireball', 'dragon_breath', 'open_gate', 'teleport', 'bomb',
-            'reveal', 'invisible']
+            'reveal', 'invisible', 'lumos', 'nox', 'accio',
+            'wingardium_leviosa', 'protego', 'expelliarmus']
 
 # font 3x5 wystarczy do cyfr 1-12
 CYFRY = {
@@ -40,6 +41,9 @@ METODA = {
     'dragon_breath': 'breathWave', 'open_gate': 'barredGateStroke',
     'teleport': 'twinSquares', 'bomb': 'diamondTick',
     'reveal': 'revealStroke', 'invisible': 'invisibilityStroke',
+    'lumos': 'lumosStroke', 'nox': 'noxStroke', 'accio': 'accioStroke',
+    'wingardium_leviosa': 'wingardiumStroke', 'protego': 'protegoStroke',
+    'expelliarmus': 'expelliarmusStroke',
 }
 
 
