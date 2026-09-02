@@ -20,7 +20,9 @@ Sprawdza to, czego `./gradlew build` nie wyłapie albo wyłapie za pozno:
   6. `placeholder_textures.py --validate` (RGBA/palete/8 bpp) i `--check`
      (nie dotykac tekstur gracza),
   7. `gesture_set.py --sync` - szablon w Java musi byc tym samym ksztaltem co
-     model w narzedziu (patrz runda 23: "czar nie dziala" = rozniace sie drzewa).
+     model w narzedziu (patrz runda 23: "czar nie dziala" = rozniace sie drzewa),
+  8. klucze rejestrow w loot table i recipe (patrz runda 26: zly "condition"
+     = Minecraft wyrzuca caly plik, w grze nie ma dropow, w logu jedna linia).
 
 Wyjscie 0 = OK. --mcsrc nieistnieje = kroki 2-3 tylko vs drzewo moda (z
 ostrzezeniem), bo bez zrodel MC nie ma czego weryfikowac.
@@ -222,6 +224,128 @@ def krok_json(bledy):
     return ile
 
 
+# --- krok 3b: klucze rejestrow w loot table / recipe -----------------------
+# Minecraft 1.21.11 na zlym kluczu rzuca CAŁY plik: "Couldn't parse data file
+# 'wandzz:entities/phoenix' ... Unknown registry key in minecraft:loot_condition_type:
+# minecraft:killed_by_player_or_pets" (to był naprawde warunek z Bedrocka/1.12).
+# W logu launchera jest to jedna linia WARNING, w grze - po prostu brak dropow.
+# Bramka wyciaga legalne nazwy wprost ze zrzutu 1.21.11 (register("...")), wiec
+# wymyslanie kluczy nie przechodzi. Bez --mcsrc = BLAD, bo inaczej bramka milczy.
+REJESTRY_DATAPACK = {
+    'typ_tabeli': 'net/minecraft/world/level/storage/loot/parameters/LootContextParamSets.java',
+    'warunek': 'net/minecraft/world/level/storage/loot/predicates/LootItemConditions.java',
+    'funkcja': 'net/minecraft/world/level/storage/loot/functions/LootItemFunctions.java',
+    'wpis': 'net/minecraft/world/level/storage/loot/entries/LootPoolEntries.java',
+    'liczba': 'net/minecraft/world/level/storage/loot/providers/number/NumberProviders.java',
+    'przepis': 'net/minecraft/world/item/crafting/RecipeSerializer.java',
+}
+MIN_ZNALEZIONYCH = 5         # rejestr, z ktorego nic nie wyciagnelismy, nie jest bramka
+
+
+def nazwy_rejestru(mcsrc, sciezka):
+    """Nazwy zarejestrowane `register("<nazwa>", ...)` w podanej klasie zrzutu."""
+    path = os.path.join(mcsrc, sciezka)
+    if not os.path.isfile(path):
+        return None
+    return set(re.findall(r'register\(\s*"([a-z0-9_./]+)"', open(path, encoding='utf8',
+                                                                errors='replace').read()))
+
+
+def nazwy_z_vanilla(mcsrc):
+    """Czego vanilla *uzywa* w swoim datapacku - uzupelnienie rejestru (aliasy)."""
+    wynik = {'loot_root': set()}
+    for sciezka, klucz in (('data/minecraft/loot_table', 'loot_root'),):
+        for root, _dirs, names in os.walk(os.path.join(mcsrc, sciezka)):
+            for n in names:
+                if not n.endswith('.json'):
+                    continue
+                try:
+                    d = json.load(open(os.path.join(root, n), encoding='utf8'))
+                except Exception:
+                    continue
+                if isinstance(d, dict) and isinstance(d.get('type'), str):
+                    wartosc = d['type']
+                    wynik[klucz].add(wartosc[len('minecraft:'):] if wartosc.startswith('minecraft:') else wartosc)
+    return wynik
+
+
+def krok_datapack(bledy, mcsrc):
+    """Kazdy "condition"/"function"/"type" w danych moda musi istniec w 1.21.11."""
+    drzewo = os.path.join(RES, 'data')
+    pliki = []
+    for root, dirs, names in os.walk(drzewo):
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        pliki += [os.path.join(root, n) for n in names if n.endswith('.json')
+                  and ('loot_table' in root or 'recipe' in root)]
+    if not pliki:
+        return 0
+    if mcsrc is None:
+        bledy.append('datapack: bez --mcsrc nie da sie sprawdzic kluczy rejestrow '
+                     '(a to jedyny blad, ktory Minecraft wybacza milczaco)')
+        return 0
+    rejestry = {}
+    for nazwa, sciezka in REJESTRY_DATAPACK.items():
+        znalez = nazwy_rejestru(mcsrc, sciezka)
+        if znalez is None or len(znalez) < MIN_ZNALEZIONYCH:
+            bledy.append('datapack: nie wyciagnieto rejestru %r ze zrodel MC (%s)' % (nazwa, sciezka))
+            return 0
+        rejestry[nazwa] = znalez
+    # "type" wpisu puli albo dostrojca liczby - sprawdzamy against union, zeby
+    # nie mlec falszywych FAIL-i (nazwa ta sama, rodziny inne).
+    vanilla = nazwy_z_vanilla(mcsrc)
+    wpisy = rejestry['wpis'] | rejestry['liczba']
+    # "type" na gorze pliku = zestaw parametrow kontekstu (LootContextParamSets);
+    # vanilla ma tam aliasy niewidoczne w rejestrze, wiec dołaczamy to, czego
+    # sama uzywa w swoim datapacku.
+    typy = set(rejestry['typ_tabeli'])
+    for vz in vanilla['loot_root']:
+        typy.add(vz)
+    ile = 0
+    for path in pliki:
+        rel = os.path.relpath(path, MOD).replace(os.sep, '/')
+        try:
+            dane = json.load(open(path, encoding='utf8'))
+        except Exception:
+            continue                      # krok_json to zgłasza
+        relatywna = 'recipe' in rel
+
+        def wezel(o, korzen=False):
+            nonlocal ile
+            if isinstance(o, dict):
+                for klucz, rodzina in (('condition', 'warunek'), ('function', 'funkcja')):
+                    wart = o.get(klucz)
+                    if isinstance(wart, str):
+                        ile += 1
+                        if not wart.startswith('minecraft:'):
+                            bledy.append('%s: "%s": "%s" - nie w przestrzeni minecraft'
+                                         % (rel, klucz, wart))
+                        elif wart[len('minecraft:'):] not in rejestry[rodzina]:
+                            bledy.append('%s: %s "%s" nie istnieje w 1.21.11 (dostepne: %s)'
+                                         % (rel, klucz, wart, ', '.join(sorted(rejestry[rodzina]))[:150]))
+                typ = o.get('type')
+                if isinstance(typ, str) and typ.startswith('minecraft:'):
+                    ile += 1
+                    n = typ[len('minecraft:'):]
+                    if korzen and not relatywna:
+                        if n not in typy:
+                            bledy.append('%s: "type": "%s" - brak takiego zestawu parametrow loot '
+                                         'w 1.21.11 (dostepne: %s)' % (rel, typ, ', '.join(sorted(typy))))
+                    elif relatywna:
+                        if n not in rejestry['przepis']:
+                            bledy.append('%s: recipe type "%s" nie jest zarejestrowany w 1.21.11' % (rel, typ))
+                    elif n not in wpisy:
+                        bledy.append('%s: "type": "%s" to ani wpis puli (%s) ani dostrojca liczby (%s)'
+                                     % (rel, typ, ', '.join(sorted(rejestry['wpis'])),
+                                        ', '.join(sorted(rejestry['liczba']))))
+                for v in o.values():
+                    wezel(v, False)
+            elif isinstance(o, list):
+                for v in o:
+                    wezel(v, False)
+        wezel(dane, True)
+    return ile
+
+
 def krok_lang(bledy):
     lang = os.path.join(RES, 'assets', 'wandzz', 'lang')
     pl = json.load(open(os.path.join(lang, 'pl_pl.json'), encoding='utf8'))
@@ -292,6 +416,7 @@ def main(argv=None):
     n_clon = skan_api(args.api_scan, mcsrc, bledy) if args.api_scan else 0
     n_import, n_skip = krok_importy(bledy, mcsrc)
     n_json = krok_json(bledy)
+    n_datapack = krok_datapack(bledy, mcsrc)
     n_lang, n_czary, n_reg = krok_lang(bledy)
     walid = uruchom(bledy, [os.path.join(HERE, 'placeholder_textures.py'), '--validate'],
                    'placeholder_textures.py --validate')
@@ -321,8 +446,10 @@ def main(argv=None):
         except json.JSONDecodeError as e:
             bledy.append('unicorn_uv --json: nie dalo sie sparsowac (%s)' % e)
     print('%d .java | %d importow (%d pakietow bibliotecznych poza zrzutem) | '
-          '%d JSON | %d kluczy lang | %d czarow (register: %d)' %
-          (n_java, n_import, n_skip, n_json, n_lang, n_czary, n_reg))
+          '%d JSON | %d kluczy lang | %d czarow (register: %d)'
+          % (n_java, n_import, n_skip, n_json, n_lang, n_czary, n_reg))
+    print('  klucze datapacku: %d condition/function/type vs rejestry 1.21.11'
+          % n_datapack)
     if args.api_scan:
         print('  --api-scan: %d odwolan do clonow MC w %d plikach' %
               (n_clon, len(args.api_scan)))

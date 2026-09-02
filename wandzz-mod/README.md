@@ -413,12 +413,51 @@ Osobny model ma jeszcze jeden powód: `UnicornModel` to **arkusz 64×64** (tak j
 `LayerDefinition.create(mesh, 64, 64)` dla koniowatych w vanilla), a `FluffModel` to
 32×32. Oskubanie chowa grzywę i ogon (`ModelPart.visible = false`), a nie cały tułów — róg zostaje, bo to kość, nie sierść.
 
+#### Geometria: czyja jest i jak wstawić swoją
+
+Bryły w `UnicornModel` **są napisane ręcznie**, nie wyeksportowane z Blockbench.
+To nie jest upór, tylko fakt do odnotowania: w repo (żadna gałąź) nie ma pliku
+modelu — `git ls-tree -r origin/main` i API GitHuba zwracają z Twoich wgrań
+**tylko** `unicorn_txt.png` (64×64), bez `.bbmodel`, bez `geo.*.json`, bez
+wyeksportowanego `.java`. Nie ma więc czego „dodać z repo"; dopóki plik nie
+trafi do `CyaneaOS/Wandzz`, w grze oglądasz moje przybliżenie sylwetki, a Twoje
+piksele są tylko *rozłożone* na moich bryłach (patrz tabela UV niżej).
+
+Żeby to był Twój koń 1:1, wrzuć **jeden** z tych plików do repo (najlepiej do
+`wandzz-mod/src/client/resources/assets/wandzz/blockbench/`, ale root też mi
+wystarczy — i tak go stamtąd wezmę):
+
+1. **Blockbench → File → Export → Export Model → Java Model (`.java`)** — to ścieżka
+   bez strat: liczby w tym pliku są już w przestrzeni Minecrafta (`addBox`,
+   `texOffs`, `PartPose`), więc przepisuję je bez żadnego przeliczania i nie ma
+   pola na zgadywanie znaków osi;
+2. albo sam plik projektu **`.bbmodel`** — wtedy czytam `geometry` (bryły:
+   `from`/`to`/`uv`/`origin`/`rotation`/`mirror`) i animacje (`animations →
+   animators → keyframes`), ale przeliczenie originów Blockbench (oś Y w górę,
+   pivot w kostce) na `PartPose` (oś Y w dół) robię przy Twoim pliku i sprawdzam
+   okiem na podglądzie — nie chcę tego zgadywać na ślepo, bo właśnie takie
+   zgadywanie dało sylwetkę, która „nie jest ta sama co w Blockbenchu".
+
+Animacji (chód, klepanie ogona, ruch grzywy) nie ruszamy: one są *zachowaniem*,
+liczbami z `AbstractEquineModel`, i zostają doklejone do Twoich kości po nazwach
+(`head`, `neck`, `leg_front_left`, `tail`, `mane`, …). Jeśli w Blockbenchu
+nazwiesz kości inaczej, napisz w komentarzu do commita jakie nazwy masz —
+dopiszę mapowanie. Po imporcie odpalam `tools/unicorn_uv.py --dopasuj`, bo nowe
+bryły = nowe pola do zamalowania na arkuszu, i `tools/check_all.py`.
+
 ### Feniks (`wandzz:phoenix`)
 
 Siada **na wierzchołku korony** drzewa arkanu (duch wisi *pod* koroną - dwie sylwetki na
 jednym drzewie czytają się bez błędu). 3,5% szansy na drzewo, dedupe w promieniu korony.
 `fireImmune()` na `EntityType.Builder` - w 1.21.11 to flaga rejestru encji, a nie nadpisanie
-`hurt`, więc feniks nie spala siebie i nie tonie w lawie. Śmiertelne uderzenie podpala
+`hurt`, więc feniks nie spala siebie i nie tonie w lawie.
+Pióra (`wandzz:phoenix_feather`, 1–2) leci z `loot_table/entities/phoenix.json`, a
+cała pula ma jeden warunek: `minecraft:killed_by_player`. W 1.21.11 znaczy to
+dosłownie „ostatnim sprawcą obrażeń był gracz" — implementacja to
+`context.hasParameter(LootContextParams.LAST_DAMAGE_PLAYER)`, więc ubicie przez
+oswojonego wilka czy innego moba dropów **nie** da. Własnego warunku
+„player_or_pets" Java nigdy nie miała (jest tylko `killed_by_player`), a wpisanie
+nieistniejącej nazwy wywala cały plik lootu — patrz sekcja o błędach świata. Śmiertelne uderzenie podpala
 sprawcę (`die(DamageSource)` + `setSecondsOnFire(4)`) i sypie `SOUL_FIRE_FLAME`.
 
 ### Chronos - boss ołtarza w Arkanum (`wandzz:chronos_boss`)
@@ -767,6 +806,12 @@ o `Spell#canCast` przed płatnością.
   parsowalny, lang w parity z `.name`/`.desc` dla wszystkich 18 czarów i z
   licznikiem `register()` vs `spell/impl/`, walidacja tekstur (bez dotykania
   Twoich plików) i `--sync` gestów.
+  Od tej rundy także **klucze rejestrów w datapacku**: każdy `"condition"`,
+  `"function"` i `"type"` w `loot_table/**` oraz `"type"` w `recipe/**` musi
+  istnieć w rejestrze 1.21.11, wyciągniętym ze zrzutu źródeł
+  (`LootItemConditions`, `LootItemFunctions`, `LootPoolEntries`, `NumberProviders`,
+  `LootContextParamSets`, `RecipeSerializer`). 108 sprawdzonych kluczy. Sama
+  parsowalność JSON nie wystarcza — patrz niżej.
 * `python3 wandzz-mod/tools/check_all.py --api-scan $(find src/main/java -name '*.java')`
   – dodatkowo sprawdza pisownię członów Minecrafta, które wołamy, przeciw zrzutowi
   źródeł 1.21.11 (`--mcsrc`, domyślnie `/home/user/mcsrc`). To ten test złapał
@@ -1003,6 +1048,30 @@ python3 wandzz-mod/tools/placeholder_textures.py --validate   # czy kazdy PNG je
   wtedy dwie bramy nadziemne dzielą jedną platformę. Następcą tego jest
   `SavedData` z `SavedDataType(id, supplier, codec, DataFixTypes)` – API dostępne,
   tylko świadomie nieużyte.
+
+- **Trzy linie z logu przy tworzeniu świata (2026-09-02), po jednej na każdy
+  rodzaj przyczyny**:
+  * `com.mojang.text2speech.Narrator$InitializeException: Unable to load library
+    'flite'` — **nie nasze**: to narrator Minecrafta chce `libflite` do mowy, a
+    na Archu ten pakiet jest osobny. `sudo pacman -S flite` albo
+    Opcje → Dostępność → Narrator = wyłącz. Nie wpływa na mod ani na świat.
+  * `########## GL ERROR ########## @ Render — 65547: X11: Standard cursor shape
+    unavailable` — **nie nasze**: menedżer okien nie ma kursora z nazwy, o który
+    prosi GLFW/X11 (temat kursorów bez `Xcursor.theme`). Naprawia się
+    `xcursor-breeze`/`xcursor-themes` + `Xcursor.theme` w `~/.Xresources` albo
+    startem na Waylandzie. W kodzie moda nie ma czego zmieniać.
+  * `Couldn't parse data file 'wandzz:entities/phoenix' from
+    'wandzz:loot_table/entities/phoenix.json': Unknown registry key in
+    minecraft:loot_condition_type: minecraft:killed_by_player_or_pets` — **nasze
+    i naprawione w tej rundzie**: w rejestrze `loot_condition_type` 1.21.11 jest
+    19 warunków i `killed_by_player_or_pets` wśród nich nie ma (jest sam
+    `killed_by_player`). Rejestr jest *closed*, więc serwer zrzuca cały plik lootu
+    jako „Error" i feniks nie wypada **nic** — w grze zero błędu, jedna linia w
+    logu przy tworzeniu świata. Poprawka: `minecraft:killed_by_player` (to, czego
+    używają już `unicorn.json` i nadpisania `minecraft:loot_table/entities/warden.json`).
+    Bramka `tools/check_all.py` liczy teraz klucze lootu/recipes przeciw rejestrom
+    ze zrzutu, więc wymyślenie warunku kończy się FAIL-em przed pushem, nie w
+    połowie tworzenia świata.
 
 - Pozostałe 13 core'ów ma tylko nazwę i poziom – potrzebują własnych zaklęć
   i efektów (analogicznie do Feather/Dragon Breath).
