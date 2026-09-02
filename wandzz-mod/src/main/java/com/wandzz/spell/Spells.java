@@ -36,5 +36,11 @@ public final class Spells {
         // SpellRegistry, wiec nic tu wiecej nie trzeba dokladac.
         SpellRegistry.register(new HealSpell(), GestureTemplates.healStroke());
         SpellRegistry.register(new LeapSpell(), GestureTemplates.leapStroke());
+
+        // Odkrycie (lvl 2) i niewidzialnosc (lvl 3): para, ktora sie swierza -
+        // reveal podswietla takze gracza pod niewidka, bo obrys i model encji to
+        // dwie niezalezne warstwy renderowania.
+        SpellRegistry.register(new RevealSpell(), GestureTemplates.revealStroke());
+        SpellRegistry.register(new InvisibilitySpell(), GestureTemplates.invisibilityStroke());
     }
 }

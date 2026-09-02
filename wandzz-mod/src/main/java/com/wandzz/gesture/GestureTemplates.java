@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Ksztalty gestow dla 10 zaklec moda.
+ * Ksztalty gestow dla 12 zaklec moda.
  *
  * <p>TO NIE JEST zbior "ladnych" ikon. {@code $1} jest nieczuly na obrot, skale i
  * predkosc rysowania, a po normalizacji z ksztaltu zostaja WYLACZNIE kolejnosc
@@ -32,10 +32,16 @@ import java.util.List;
  * reki (od rysika do drzacej myszy, w tym "urwany ogon"), trzy koszyki dostepnych
  * czarow, 40 prob na czar:
  * <pre>
- *   koszyk lvl 1 (4 czary)            100.0% trafien, 0.0% trafien w obcy czar
- *   koszyk lvl 2 (8 czarow)            96.4% trafien, 0.0% trafien w obcy czar
- *   pelny koszyk (10 czarow)           94.3% trafien, 0.0% trafien w obcy czar
+ *   koszyk lvl 1 (4 czary)             100.0% trafien, 0.0% trafien w obcy czar
+ *   koszyk lvl 2 (9 czarow)             96.8% trafien, 0.0% trafien w obcy czar
+ *   pelny koszyk (12 czarow)            95.3% trafien, 0.0% trafien w obcy czar
+ *   RAZEM                               96.6% trafien, 0.0% trafien w obcy czar
  * </pre>
+ *
+ * <p>Dwa najnowsze ksztalty (krzyz-celownik i schody w dol) weszly do zestawu
+ * BEZ zadnego kompromisu: w kazdym z czterech modelow reki trafiaja w siebie w
+ * 100% prob, a w zadnym kierunku nie kradna niczyjego czarza - patrz wpisy
+ * {@link #revealStroke()} i {@link #invisibilityStroke()}.
  * Ten sam test na zestawie z poprzedniej rundy (swieczka, luk, gwiazda):
  * 93.1% trafien, ale 40-100% RZUCANYCH ZLYCH CZAROW dla leczenia, kuli ognia i
  * oddechu smoka w modelu "urwany ogon". To byl dokladnie blad zgloszony przez
@@ -239,6 +245,56 @@ public final class GestureTemplates {
                 new Point(-175, 60), new Point(-175, -60), new Point(-65, -60), new Point(-65, 60),
                 new Point(65, 60),
                 new Point(65, -60), new Point(175, -60), new Point(175, 60), new Point(65, 60)
+        );
+    }
+
+    /**
+     * Odkrycie: krzyz "celownik" - jedna pionowa kreska, przejazd po skosie w
+     * gore i poziomka. Trzy segmenty, zero lukow, zero domkniecia.
+     *
+     * <p>Dlaczego nie "oko"? Bo ksztalt z dwoma plaskimi luczkami (gorna i dolna
+     * powieka) jest dla $1 niczym innym jak micha, a micha jest najlepszym
+     * sasiedziem kola - czyli leczenia (patrz punkt 1 w javadoku klasy). Krzyz
+     * zostal wybrany pomiarem, nie gustem: w tools/gesture_eval.py kandydaci z
+     * rodzinek "luk", "micha", "kolo z kreska" kradli obcy czar, a ten trafil
+     * w siebie w 100% prob we wszystkich czterech modelach reki (w tym "uciety"
+     * - gracz, ktory puszcza PPM w 72% sciezki).
+     *
+     * <p>Nie myli sie z pochodnia (T): tam poprzeczka jest NA KONCU trzonka, tu
+     * pionowa kreska ja PRZECINA, wiec rozklad mas jest caly czas inny.
+     */
+    public static List<Point> revealStroke() {
+        return List.of(
+                new Point(0, -100),
+                new Point(0, 100),
+                new Point(-100, 0),
+                new Point(100, 0)
+        );
+    }
+
+    /**
+     * Niewidzialnosc: schody w dol - trzy poziome stopnie polaczone dwoma
+     * pionowymi stopniami. Piec segmentow, zadnego zawracania.
+     *
+     * <p>Ten ksztalt sprzedaje swoja nazwe: kazdy kolejny stopien jest krotszy i
+     * nizej, czyli "znikam krok po kroku". Rysuje sie go naturalnie jednym
+     * ruchem rekawki (w dol i w prawo), bez przejezdzania po wczesniejszych
+     * kreskach - jako jedyny gest w tym pliku nie wymaga "powrotu", a mimo to
+     * mierzy sie lepiej niz wiekszosc prostszych ksztaltow (100% trafien we
+     * wszystkich czterech modelach reki, 0% kradziezy w obie strony).
+     *
+     * <p>Odrzucone kandydaty z tej samej rodziny: "kolo z kreska" (znikajace oko)
+     * i "rama z X" - pierwszy wpadal w leczenie, drugi w brame przy ujetym
+     * ostatnim boku.
+     */
+    public static List<Point> invisibilityStroke() {
+        return List.of(
+                new Point(-110, -70),
+                new Point(-40, -70),
+                new Point(-40, -10),
+                new Point(20, -10),
+                new Point(20, 50),
+                new Point(90, 50)
         );
     }
 

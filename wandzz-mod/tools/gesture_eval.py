@@ -55,10 +55,12 @@ JAVA_METHODS = {
     'leap': 'leapStroke', 'heal': 'healStroke', 'fireball': 'flameTriangle',
     'dragon_breath': 'breathWave', 'open_gate': 'barredGateStroke',
     'teleport': 'twinSquares', 'bomb': 'diamondTick',
+    'reveal': 'revealStroke', 'invisible': 'invisibilityStroke',
 }
 # Spell#requiredLevel - tu tylko po to, zeby zbudowac koszyki jak w grze.
 LEVEL = {'strike': 1, 'break_block': 1, 'torch': 1, 'leap': 1, 'heal': 2,
-         'fireball': 2, 'dragon_breath': 2, 'open_gate': 2, 'teleport': 3, 'bomb': 3}
+         'fireball': 2, 'dragon_breath': 2, 'open_gate': 2, 'teleport': 3, 'bomb': 3,
+         'reveal': 2, 'invisible': 3}
 
 SHAPES = {
     'strike':        [(-100, 60), (-20, 60), (60, -80), (100, -20)],
@@ -72,6 +74,9 @@ SHAPES = {
     'teleport':      [(-175, 60), (-175, -60), (-65, -60), (-65, 60), (65, 60),
                       (65, -60), (175, -60), (175, 60), (65, 60)],
     'bomb':          [(-100, 0), (0, -100), (100, 0), (0, 100), (-100, 0), (0, -40), (0, 40)],
+    # dwie nowe (runda 21) - dobrane POMIAREM, nie gustem; patrz GestureTemplates
+    'reveal':        [(0, -100), (0, 100), (-100, 0), (100, 0)],
+    'invisible':     [(-110, -70), (-40, -70), (-40, -10), (20, -10), (20, 50), (90, 50)],
 }
 # Zestaw z rundy 16 (swieczka / luk / gwiazda) - pozostaje jako porownanie,
 # zeby nie dac sie ponownie skusic "ladniejszym" ksztaltom.
@@ -148,15 +153,28 @@ def hand(shape, rng, v):
     return cut_by_length(p, kw['cut'])
 
 # ------------------------------------------------------------------- pomiar --
-def measure(shapes, trials=TRIALS, seed=4711):
+def baskets_for(shapes):
+    """Koszyki ZLOZONE Z PODANEGO ZESTAWU, nie z globalnego SHAPES.
+
+    Bez tego OLD_SHAPES (dziesiec czarow z rundy 16) wywolywalo KeyError, bo
+    BASKETS liczy sie z biezacych dwunastu - a punkt odniesienia ma zostac
+    punktem odniesienia w swojej wlasnej, historyjnej konfiguracji.
+    """
+    return {'lvl1':  [k for k in shapes if LEVEL.get(k, 3) <= 1],
+            'lvl2':  [k for k in shapes if LEVEL.get(k, 3) <= 2],
+            'pelny': list(shapes)}
+
+
+def measure(shapes, trials=TRIALS, seed=4711, baskets=None):
     """Zwraca per[(slot, basket)][model] = (trafienia, odmowy, zly) w procentach."""
+    baskets = baskets or baskets_for(shapes)
     slots = list(shapes)
     norms = {k: G.normalize(v) for k, v in shapes.items()}
     per = {}
     for model in VARIANTS:
         rng = random.Random(seed + 7919*len(model))
         for slot in slots:
-            for basket, bs in BASKETS.items():
+            for basket, bs in baskets.items():
                 if slot not in bs:
                     continue
                 tpl = {st: norms[st] for st in bs}
@@ -178,14 +196,15 @@ def measure(shapes, trials=TRIALS, seed=4711):
     return per
 
 def report(shapes, label, verbose=False):
-    per = measure(shapes)
+    baskets = baskets_for(shapes)
+    per = measure(shapes, baskets=baskets)
     print('== %s ==' % label)
     tot = {'ok': 0.0, 'ref': 0.0, 'wrong': 0.0, 'n': 0}
     worst_wrong = 0.0
-    for basket in BASKETS:
+    for basket in baskets:
         line = []
         b_ok = b_wrong = 0.0
-        for slot in BASKETS[basket]:
+        for slot in baskets[basket]:
             cells = list(per[(slot, basket)].values())
             ok = min(c[0] for c in cells)
             wrong = max(c[2] for c in cells)
@@ -196,7 +215,7 @@ def report(shapes, label, verbose=False):
             if verbose:
                 for m, c in per[(slot, basket)].items():
                     print('        %-14s %-8s traf %3.0f odm %3.0f zly %3.0f' % (slot, m, *c))
-        n = len(BASKETS[basket])
+        n = len(baskets[basket])
         print('   %-6s srednio %5.1f%% trafien | %s' % (basket, b_ok/n, '  '.join(line)))
         tot['ok'] += b_ok; tot['wrong'] += b_wrong; tot['n'] += n
     print('   RAZEM: %.1f%% trafien, max ZLY CZAR %.1f%%  ->  %s'
@@ -250,7 +269,8 @@ def sync():
             bad += 1
             print('     java: %s' % pts[:6])
             print('     py  : %s' % [tuple(round(c) for c in p) for p in mine[:6]])
-    print('--sync: %s' % ('ROZJEZDNE (%d)' % bad if bad else 'ZGODNE (wszystkie 10 ksztaltow)'))
+    print('--sync: %s' % ('ROZJEZDNE (%d)' % bad if bad
+                       else 'ZGODNE (wszystkie %d ksztaltow)' % len(JAVA_METHODS)))
     return bad
 
 if __name__ == '__main__':

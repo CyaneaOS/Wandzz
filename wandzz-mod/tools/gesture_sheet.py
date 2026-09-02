@@ -24,9 +24,10 @@ import gesture_eval as E   # pylint: disable=wrong-import-order
 REPO = pathlib.Path(__file__).resolve().parents[1]
 
 KSZTALTY = ['strike', 'break_block', 'torch', 'leap', 'heal',
-            'fireball', 'dragon_breath', 'open_gate', 'teleport', 'bomb']
+            'fireball', 'dragon_breath', 'open_gate', 'teleport', 'bomb',
+            'reveal', 'invisible']
 
-# font 3x5 wystarczy do cyfr 1-10
+# font 3x5 wystarczy do cyfr 1-12
 CYFRY = {
     '0': '###|#.#|#.#|#.#|###', '1': '.#.|##.|.#.|.#.|.##', '2': '###|..#|###|#..|###',
     '3': '###|..#|.##|..#|###', '4': '#.#|#.#|###|..#|..#', '5': '###|#..|###|..#|###',
@@ -38,6 +39,7 @@ METODA = {
     'leap': 'leapStroke', 'heal': 'healStroke', 'fireball': 'flameTriangle',
     'dragon_breath': 'breathWave', 'open_gate': 'barredGateStroke',
     'teleport': 'twinSquares', 'bomb': 'diamondTick',
+    'reveal': 'revealStroke', 'invisible': 'invisibilityStroke',
 }
 
 

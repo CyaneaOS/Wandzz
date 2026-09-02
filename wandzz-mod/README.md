@@ -15,13 +15,14 @@ Mysz -> MouseInput -> CastingData (List<Point>) -> $1 Recognizer
   Recognizer** (Wobbrock/Wilson/Li 2007): resample → rotate → scale+translate →
   golden-section search po kącie obrotu. Napisana od zera na podstawie opisu
   algorytmu, nie skopiowana z żadnego repozytorium.
-- **`spell/`** – interfejs `Spell`, rejestr `SpellRegistry` oraz 8 zaklęć:
-  `StrikeSpell`, `BreakBlockSpell`, `TorchSpell` (lvl 1), `FireballSpell` (lvl 2),
-  `TeleportSpell`, `BombSpell`, `DragonBreathSpell` (lvl 3 – dostępne dla
-  **każdego** core'a lvl 3+, nie tylko Dragon Breath Core, zgodnie z dokumentem)
-  i `OpenGateSpell` (lvl 3 – odpalenie bramy do Arkanum). `Spell#canCast` pozwala
+- **`spell/`** – interfejs `Spell`, rejestr `SpellRegistry` oraz **12 zaklęć**:
+  `StrikeSpell`, `BreakBlockSpell`, `TorchSpell`, `LeapSpell` (lvl 1),
+  `FireballSpell`, `HealSpell`, `RevealSpell` (lvl 2),
+  `TeleportSpell`, `BombSpell`, `DragonBreathSpell`, `OpenGateSpell`,
+  `InvisibilitySpell` (lvl 3 – dostępne dla
+  **każdego** core'a lvl 3+, nie tylko Dragon Breath Core, zgodnie z dokumentem). `Spell#canCast` pozwala
   odmówić *przed* pobraniem many, gdy nie ma celu (patrz „Przejście do Arkanum“).
-- **`core/CoreType`** – 15 typów core'ów z poziomami. W pełni opisane w dokumencie
+- **`core/CoreType`** – 16 typów core'ów z poziomami. W pełni opisane w dokumencie
   (`FEATHER` lvl 1, `DRAGON_BREATH` lvl 3) są gotowe; pozostałe 13 to sloty do
   dalszej rozbudowy (nazwy/poziomy do dopracowania razem z Tobą).
 - **`wand/WandWood`** – 13 gatunków drewna (11 vanilla + bambus + arkany); każdy
@@ -233,11 +234,11 @@ zostaje narysowane - najczęstszy realny błąd), **drżąca mysz** (dużo punkt
 dryf brązowski ~3× większy) i **rysik** (dużo punktów, małe drgnienia). Na
 każdym modelu losowa skala 0,55-1,5 i obrót ±20°.
 
-| zestaw | koszyk lvl 1 | koszyk lvl 2 | pełny (10) | złe rzucenia |
+| zestaw | koszyk lvl 1 | koszyk lvl 2 | pełny (12) | złe rzucenia |
 |---|---|---|---|---|
 | runda 16 (świeczka, łuk, gwiazda) | 100% | 90,5% | 92,4% | **do 100% dla `heal`, `fireball`, `dragon_breath` w modelu „urwany ogon”** |
-| ten (T, ptaszek, amortyzator, trójkąt, N) | **100%** | **96,4%** | **94,3%** | **0,0%** |
-| ten, model „dokańczony gest” (`gesture_set.py`) | 100% | 100% | 97,8% | 0,0% |
+| ten (T, ptaszek, amortyzator, trójkąt, N, krzyż, schody) | **100%** | **96,8%** | **95,3%** | **0,0%** |
+| ten, model „dokańczony gest” (`gesture_set.py`) | 100% | 100% | 98,1% | 0,0% |
 
 Dwie zapory, które trzymają te liczby, zostały z poprzedniej rundy i nadal
 robią robotę:
@@ -245,7 +246,7 @@ robią robotę:
 1. **Koszyk.** `CastingScreen#castableIds` czyta komponent `wandzz:wand_data` z
    trzymanej różdżki (serwer i tak go synchronizuje) i rozpoznaje **tylko wśród
    czarów, które twoje rdzenie udostępniają** - ten sam warunek
-   `Spell#isProvidedBy`, który sprawdza serwer. 10 kształtów walczy ze sobą;
+   `Spell#isProvidedBy`, który sprawdza serwer. 12 kształtów walczy ze sobą;
    4 nie walczą.
 2. **Margines.** `DollarOneRecognizer.AMBIGUITY_MARGIN = 0,035`: jeśli lider
    wyprzedza wicelidera o mniej, gest jest **odrzucony** z komunikatem
@@ -256,7 +257,7 @@ robią robotę:
 Obniżony próg ze zgrania **nie** ignoruje marginesu - zgranie pomaga na drżenie
 ręki, nie na niejednoznaczność.
 
-### Co rysować (10 czarów)
+### Co rysować (12 czarów)
 
 Ten sam rysunek, który widzi gracz, jest w [`docs/gestures.png`](docs/gestures.png)
 (czerwona kropka = początek, niebieska = koniec). Obrazek jest *generowany* ze
@@ -278,6 +279,8 @@ python3 wandzz-mod/tools/gesture_sheet.py     # nadpisuje docs/gestures.png
 | `open_gate` | litera **N**: lewy filar w górę, skos do prawego, prawy filar w dół | 3 |
 | `teleport` | **dwa kwadraty połączone kreską** | 9 |
 | `bomb` | romb z kreską w środku | 6 |
+| `reveal` | **krzyż-celownik**: pion w dół, przejazd do lewej, poziomka w prawo | 3 |
+| `invisibility` | **schody w dół**: trzy stopnie, coraz niżej, bez zawracania | 5 |
 
 Kształty są do siebie niepodobne *z konstrukcji*, nie z dekoracji: ptaszek i
 pudło mają nachodzące na siebie odcinki, T i N mają prostopadłe ramiona,
@@ -403,12 +406,37 @@ tego cała ścieżka "poświęcone patyki → magiczna różdżka" wysycha po pi
 drzewa, a mapa drzew w `SavedData` jest w tym projekcie zabroniona (wymagałaby
 domkniętego `DataFixTypes`), więc skan jest celowo bezstanowy.
 
-### Dwa nowe czary (jest ich 10)
+### Dwa najnowsze czary (jest ich 12)
 
 | czar | id | koszt | gest | kto udostępnia |
 |---|---|---|---|---|
-| Leczenie | `heal` | 14 | dwa łuki w serce | `LIGHT`, `NATURE` i każdy rdzeń lvl ≥ 3 |
-| Skok | `leap` | 6 | „V" z długim ogonem w górę | każdy rdzeń lvl ≥ 1 |
+| Odkrycie | `reveal` | 16 | krzyż-celownik | każdy rdzeń lvl ≥ 2 |
+| Niewidzialność | `invisibility` | 22 | schody w dół | każdy rdzeń lvl ≥ 3 |
+| Leczenie | `heal` | 14 | kółko | `LIGHT`, `NATURE` i każdy rdzeń lvl ≥ 3 |
+| Skok | `leap` | 6 | amortyzator | każdy rdzeń lvl ≥ 1 |
+
+**`reveal`** daje `MobEffects.GLOWING` wszystkim `LivingEntity` w kuli 25 kratek
+od klatki piersiowej rzucającego (30 s), bez własnego renderera i bez jednego
+własnego pakietu – obrys rysuje klient z flagi encji. Dwadzieścia pięć kratek to
+dobrze **poniżej** limitów synchronizacji: vanilla podaje `clientTrackingRange` w
+chunkach (potwory 8 = 128 kratek, większość zwierząt 10, gracz 32), a
+`simulation-distance` ma domyślnie 10 chunków – więc każdy, kto w ogóle widzi
+daną encję, widzi też jej obrys. Większy promień znikałby w zależności od
+ustawień klienta i wyglądał jak psujący się czar. Itemy i kule XP są poza
+zakresem: efekt noszą tylko istoty żywe, a `Item` nie ma `addEffect` - nie ma
+czego podświetlać.
+
+**`invisibility`** to `MobEffects.INVISIBILITY` na 45 s złożone tak, żeby nie było
+„bąbelków mikstury”: instancja efektu idzie z `ambient=false, visible=false,
+showIcon=true`. `visible=false` wycina cząstki u źródła (vanilla
+`LivingEntity#updateSynchronizedMobEffectParticles` filtruje po
+`MobEffectInstance#isVisible()` i wynik wrzuca do `DATA_EFFECT_PARTICLES`, więc
+znikają u wszystkich, nie tylko u rzucającego), a `showIcon=true` zostawia
+licznik w HUD – pięcioargumentowy konstruktor ustawia `showIcon = visible`, więc
+bez jawnego szóstego argumentu zostalibyście bez ikony i bez pojęcia, kiedy
+niewidzialność minie. Oba czary są parą: `reveal` rysuje obrys niezależnie od
+niewidzialności, więc „niewidzialny, ale świecący” nie jest bugiem, tylko grą
+dwóch zaklęć.
 
 `heal` celowo nie podnosi zdrowia wprost (`setHealth`) tylko dokłada `REGENERATION` +
 `ABSORPTION`: bezpośrednie wystawienie HP omija tarcze, jedzenie i efekty. `canCast`
@@ -464,7 +492,7 @@ regeneracji many i podpowiedź, jak go zamontować.
 |---|---|---|
 | `wandzz:arcane_log` | kłoda (`RotatedPillarBlock`) | ścinka drzewa w arkanum / kreatywa |
 | `wandzz:arcane_planks` | deski | 1 kłoda → 4 deski |
-| `wandzz:arcane_leaves` | liście (`LeavesBlock`, gniją bez nożyc) | łamanie liści |
+| `wandzz:arcane_leaves` | liście (`LeavesBlock`, **nie** gniją – patrz niżej) | łamanie liści |
 | `wandzz:arcane_sapling` | sadzonka (`ArcaneSaplingBlock`) | 5% szansa z liści |
 | `wandzz:arcane_table` | **stolik arcaniczny** (patrz niżej) | 3 deski + 2 patyki arkańskie |
 | `wandzz:arcane_ember` | **Arkanny Zar** – kotwica bramy (patrz niżej) | jeziorka lawy w podziemiach, Y ∈ <-52, 0>; wymagany kilof z żelaza |
@@ -624,7 +652,7 @@ o `Spell#canCast` przed płatnością.
 żadnych współrzędnych tu nie przepisujemy. Trzy sposoby, żeby je zobaczyć:
 
 * **księga zaklęć** w grze (diagram pod opisem czaru) – rysuje te same punkty,
-* `docs/gestures.png` – arkusz 10 kształtów, **generowany** przez
+* `docs/gestures.png` – arkusz 12 kształtów, **generowany** przez
   `python3 wandzz-mod/tools/gesture_sheet.py`, więc nie może się rozjechać,
 * `python3 wandzz-mod/tools/gesture_eval.py --sync` – sprawdza, że Python i Java
   mają co do punktu te same kształty (używane przy każdej zmianie gestu).
@@ -650,8 +678,13 @@ niskiego poziomu / za mało many / gest nierozpoznany).
 
 ## Drzewa, duch arkanu i żywica
 
-- Korona: trzy warstwy 7×7, czwarta 3×3, czubek plus 3–5 wiszących kosmyków;
-  naroża bywają odpuszczone, żeby brzeg był postrzępiony.
+- **Korona to kapelusz, nie placek.** Sześć warstw (`+2` do `-3` względem
+  ostatniego bloku pnia): czubek 3×3, garnuszek 5×5, ramię 7×7, **rondo 9×9**,
+  podwinięte 7×7 i płaszcz 5×5 przy pniu. Średnio 210 bloków liści na koronę
+  (stary profil dawał 120) i – zmierzone symulacją na 200 drzewach – **zero**
+  drzew z dziurą nad pniem: kratka `|dx|<=1 && |dz|<=1` nigdy nie jest
+  „odczepiana”, więc losowe postrzępienie brzegu nie może odsłonić pnia.
+  3–5 wiszących kosmyków zostaje.
 - **Liście nie gniją na poziomie bloku, nie na poziomie stanu.** Vanilla liczy
   gnicie z pary `DISTANCE==7 && !PERSISTENT` (`LeavesBlock#isRandomlyTicking` →
   `randomTick` → `removeBlock`), a feature kładący blok przez `LevelWriter#setBlock`

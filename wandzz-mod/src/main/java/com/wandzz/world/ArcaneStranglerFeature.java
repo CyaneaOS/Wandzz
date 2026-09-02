@@ -193,32 +193,68 @@ public class ArcaneStranglerFeature extends Feature<NoneFeatureConfiguration> {
     // ------------------------------------------------------------------
 
     /**
-     * {@code center} to slupek ostatniego loga; korona schodzi w dol od niego o
-     * trzy warstwy i ma czubek jeden blok wyzej.
+     * Korona jako KAPELUSZ (slowo gracza: "pnie maja byc zasloniete w calosci,
+     * tworzac kapelusz").
+     *
+     * <p>Stary profil - cztery warstwy 3/3/2/1 plus jedna kreska lisci nad
+     * szczytem - dokladnie jednego NIE robil: pien wystawal spod korony jak
+     * swieczka z tortu, a patrzac od gory widac bylo logi. Teraz liscia nie
+     * leza NA pniu, tylko go OKALAJA: czubek dwie kreski nad ostatnim logiem,
+     * garnuszek, rondo (najszersza warstwa) i plaszcz sciagniety do pnia trzy
+     * pietra pod rondem. Pni jest zasloniety ze wszystkich stron w calym tym
+     * pasmie, a nie zakryty "czapka z dziurami".
+     *
+     * <p>Zasada, ktorej nie lamie zadna warstwa: kratka {@code |dx|<=1 &&
+     * |dz|<=1} (pien i jego obrys) NIGDY nie jest "odczepiana" - losowe wyciecie
+     * brzegu dotyczy wylacznie zewnetrznej obramki warstwy. Bez tego guardu
+     * generator potrafilby zostawic dziure prosto nad pniem, a wtedy "drzewo z
+     * zaslonietym pniem" zalezy od rzutu kostka, nie od kodu.
+     *
+     * <p>Koszt jest policzony, nie odgadywany: symulacja tego profilu daje
+     * srednio 210 blokow lisci na korone (stary dawa 120) i zero drzew z
+     * dziura nad pniem na 200 prob. To wciaz tanio, bo {@code setBlock} przy
+     * generowaniu to jeden zapis w sekcji chunka, a nasze liscia
+     * ({@link com.wandzz.block.ArcaneLeavesBlock}) nie tickuja w ogole -
+     * gestsza korona NIE doklada wiec pracy serwerowi w czasie gry.
      */
     private void placeCanopy(final WorldGenLevel level, final RandomSource random, final BlockPos center,
             final List<BlockPos> rimOut) {
 
-        for (int layer = 0; layer < 4; layer++) {
-            final int radius = layer <= 1 ? 3 : layer == 2 ? 2 : 1;
-            final BlockPos base = center.below(layer);
-            for (int dx = -radius; dx <= radius; dx++) {
-                for (int dz = -radius; dz <= radius; dz++) {
-                    final boolean corner = Math.abs(dx) == radius && Math.abs(dz) == radius;
-                    if (corner && random.nextFloat() < (layer == 3 ? 0.9F : 0.45F)) {
+        // {przesuniecie w Y, promien, szansa odciecia brzegu w %} - od gory kapelusza
+        // az pod rondo. d[0] to szczyt (2 kreski nad pniem), d[3] to rondo.
+        final int[][] profil = {
+                {2, 1, 0},
+                {1, 2, 30},
+                {0, 3, 22},
+                {-1, 4, 15},
+                {-2, 3, 32},
+                {-3, 2, 12},
+        };
+        for (final int[] warstwa : profil) {
+            final int dy = warstwa[0];
+            final int promien = warstwa[1];
+            final int ciecie = warstwa[2];
+            final BlockPos baza = center.offset(0, dy, 0);
+            for (int dx = -promien; dx <= promien; dx++) {
+                for (int dz = -promien; dz <= promien; dz++) {
+                    // srodek to pien: jego otoczenia NIGDY nie skracamy
+                    final boolean okoloPnia = Math.abs(dx) <= 1 && Math.abs(dz) <= 1;
+                    if (!okoloPnia && (Math.abs(dx) == promien || Math.abs(dz) == promien)
+                            && random.nextInt(100) < ciecie) {
                         continue;
                     }
-                    final BlockPos pos = base.offset(dx, 0, dz);
-                    if (layer >= 2 && place(level, pos, leafState())) {
+                    final BlockPos pos = baza.offset(dx, 0, dz);
+                    // kotwica duha i feniksa = dolna krawedz ronda, nie srodek
+                    if (place(level, pos, leafState()) && dy <= -2
+                            && (Math.abs(dx) >= 2 || Math.abs(dz) >= 2)) {
                         rimOut.add(pos);
                     }
                 }
             }
         }
-        place(level, center.above(1), leafState());
 
         // "koncowki" zwisajace z krawedzi - to one sprzedaja ksztalt drzewa
-        // magicznego, a nie debowego
+        // magicznego, a nie debowego; startuja z ronda (dwa pietra pod szczytem)
         final int strands = 3 + random.nextInt(3);
         for (int i = 0; i < strands; i++) {
             final double a = random.nextDouble() * (2.0 * Math.PI);
